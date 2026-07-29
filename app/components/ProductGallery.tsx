@@ -25,6 +25,7 @@ export default function ProductGallery({ images }: Props) {
         {images.map((image, index) => (
           <button
             key={index}
+            type="button"
             onClick={() => setSelectedImage(image)}
             className={`border-2 rounded-xl p-2 transition ${
               selectedImage === image

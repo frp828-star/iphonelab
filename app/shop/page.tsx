@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
-
+import { useSearch } from "../context/SearchContext";
 type Product = {
   id: number;
   name: string;
@@ -26,7 +26,7 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const { search, setSearch } = useSearch();
   const [category, setCategory] = useState("All");
   const [maxPrice, setMaxPrice] = useState(50000);
 

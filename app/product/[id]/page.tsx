@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
-
+import ProductGallery from "../../components/ProductGallery";
 type Product = {
   id: number;
   name: string;
@@ -68,12 +68,8 @@ const relatedProducts = products
       <div className="grid md:grid-cols-2 gap-12">
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-[450px] object-contain"
-          />
-        </div>
+  <ProductGallery images={[product.image]} />
+</div>
 
         <div>
 
