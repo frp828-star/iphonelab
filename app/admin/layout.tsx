@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import AdminHeader from "./components/AdminHeader";
+
 export default function AdminLayout({
   children,
 }: {
@@ -32,5 +34,13 @@ export default function AdminLayout({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {/* Admin Header */}
+      <AdminHeader />
+
+      {/* Admin Page Content */}
+      {children}
+    </>
+  );
 }
