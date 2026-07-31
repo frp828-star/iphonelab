@@ -1,39 +1,30 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const filePath = path.join(
-  process.cwd(),
-  "data",
-  "users.json"
-);
-
-function getUsers() {
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-
-  const file = fs.readFileSync(filePath, "utf-8");
-
-  if (!file.trim()) {
-    return [];
-  }
-
-  return JSON.parse(file);
-}
-
-function saveUsers(users: any[]) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(users, null, 2),
-    "utf-8"
-  );
-}
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // GET - সব Users
 export async function GET() {
   try {
-    const users = getUsers();
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("id, name, email, phone, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("GET users error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    const users = (data ?? []).map((user) => ({
+      id: Number(user.id),
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      createdAt: user.created_at,
+    }));
 
     return NextResponse.json(users);
   } catch (error) {
@@ -49,7 +40,6 @@ export async function GET() {
 // POST - নতুন User তৈরি
 export async function POST(request: Request) {
   try {
-    const users = getUsers();
     const body = await request.json();
 
     const name = String(body.name || "").trim();
@@ -67,10 +57,24 @@ export async function POST(request: Request) {
     }
 
     // Duplicate email check
-    const existingUser = users.find(
-      (user: any) =>
-        String(user.email).toLowerCase() === email
-    );
+    const { data: existingUser, error: checkError } =
+      await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+    if (checkError) {
+      console.error(
+        "Check existing user error:",
+        checkError
+      );
+
+      return NextResponse.json(
+        { error: checkError.message },
+        { status: 500 }
+      );
+    }
 
     if (existingUser) {
       return NextResponse.json(
@@ -79,37 +83,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const newUser = {
-      id:
-        users.length > 0
-          ? Math.max(
-              ...users.map((user: any) => user.id)
-            ) + 1
-          : 1,
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .insert([
+        {
+          name,
+          email,
+          phone,
+          password,
+        },
+      ])
+      .select("id, name, email, phone, created_at")
+      .single();
 
-      name,
-      email,
-      phone,
-      password,
+    if (error) {
+      console.error("POST users error:", error);
 
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(newUser);
-
-    saveUsers(users);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        createdAt: newUser.createdAt,
+        id: Number(data.id),
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        createdAt: data.created_at,
       },
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error(error);
@@ -124,24 +128,38 @@ export async function POST(request: Request) {
 // DELETE - User Delete
 export async function DELETE(request: Request) {
   try {
-    const users = getUsers();
-
     const { id } = await request.json();
 
     const userId = Number(id);
 
-    const filteredUsers = users.filter(
-      (user: any) => user.id !== userId
-    );
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
-    if (filteredUsers.length === users.length) {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .delete()
+      .eq("id", userId)
+      .select("id");
+
+    if (error) {
+      console.error("DELETE users error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!data || data.length === 0) {
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
       );
     }
-
-    saveUsers(filteredUsers);
 
     return NextResponse.json({
       success: true,

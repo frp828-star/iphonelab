@@ -1,70 +1,74 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function OrderSuccessPage() {
-  const orderId =
-    "IPL" + Math.floor(100000 + Math.random() * 900000);
+function OrderSuccessContent() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-12">
-      <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-10 text-center">
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4 sm:px-6 py-12">
+      <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full p-6 sm:p-10 text-center">
 
         {/* Success Icon */}
         <div className="w-24 h-24 mx-auto rounded-full bg-green-100 flex items-center justify-center text-5xl">
           ✅
         </div>
 
-        <h1 className="text-4xl font-bold mt-6 text-green-600">
+        {/* Title */}
+        <h1 className="text-3xl sm:text-4xl font-bold mt-6 text-green-600">
           Order Placed Successfully!
         </h1>
 
         <p className="text-gray-600 mt-4">
-          Thank you for shopping with
+          Thank you for shopping with{" "}
           <span className="font-bold text-red-600">
-            {" "}iPhone Lab
-          </span>.
+            iPhone Lab
+          </span>
+          .
         </p>
 
-        {/* Order Info */}
-        <div className="mt-10 border rounded-2xl p-6 text-left space-y-4">
+        {/* Order Information */}
+        <div className="mt-10 border rounded-2xl p-5 sm:p-6 text-left space-y-4">
 
-          <div className="flex justify-between">
-            <span className="font-semibold">
+          <div className="flex justify-between items-center gap-4">
+            <span className="font-semibold text-gray-700">
               Order ID
             </span>
 
             <span className="text-red-600 font-bold">
-              #{orderId}
+              {orderId ? `#${orderId}` : "Processing"}
             </span>
           </div>
 
-          <div className="flex justify-between">
-            <span className="font-semibold">
+          <div className="flex justify-between items-center gap-4">
+            <span className="font-semibold text-gray-700">
               Status
             </span>
 
-            <span className="text-green-600 font-bold">
-              Confirmed
+            <span className="text-yellow-600 font-bold">
+              Pending
             </span>
           </div>
 
-          <div className="flex justify-between">
-            <span className="font-semibold">
+          <div className="flex justify-between items-center gap-4">
+            <span className="font-semibold text-gray-700">
               Payment
             </span>
 
-            <span>
+            <span className="text-gray-700 text-right">
               Pending Verification
             </span>
           </div>
 
-          <div className="flex justify-between">
-            <span className="font-semibold">
+          <div className="flex justify-between items-center gap-4">
+            <span className="font-semibold text-gray-700">
               Delivery
             </span>
 
-            <span>
+            <span className="text-gray-700">
               Processing
             </span>
           </div>
@@ -72,7 +76,7 @@ export default function OrderSuccessPage() {
         </div>
 
         {/* Message */}
-        <div className="mt-8 bg-blue-50 rounded-xl p-5 text-blue-700">
+        <div className="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-5 text-blue-700">
           📞 Our team will contact you shortly to confirm your order.
         </div>
 
@@ -83,19 +87,43 @@ export default function OrderSuccessPage() {
             href="/"
             className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-bold transition"
           >
-            Continue Shopping
+            🛍️ Continue Shopping
           </Link>
 
           <Link
-            href="/cart"
-            className="flex-1 border-2 border-black hover:bg-black hover:text-white py-4 rounded-xl font-bold transition"
+            href="/account"
+            className="flex-1 border-2 border-gray-900 hover:bg-gray-900 hover:text-white py-4 rounded-xl font-bold transition"
           >
-            View Cart
+            👤 My Account
           </Link>
 
         </div>
 
       </div>
     </main>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
+            <div className="text-5xl mb-4">⏳</div>
+
+            <h1 className="text-2xl font-bold text-gray-900">
+              Loading...
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Please wait.
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <OrderSuccessContent />
+    </Suspense>
   );
 }

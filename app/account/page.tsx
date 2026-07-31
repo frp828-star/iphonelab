@@ -71,14 +71,96 @@ export default function AccountPage() {
       })
         .then((res) => {
           if (!res.ok) {
-            throw new Error("Failed to load orders");
+            throw new Error(
+              "Failed to load orders"
+            );
           }
 
           return res.json();
         })
         .then((data) => {
+          /*
+            Supabase থেকে snake_case data আসে।
+            যেমন:
+            customer_id
+            customer_name
+            delivery_area
+            payment_method
+            created_at
+
+            Account page-এ আমরা camelCase ব্যবহার করছি।
+            তাই এখানে convert করছি।
+          */
+
           const allOrders: Order[] =
-            Array.isArray(data) ? data : [];
+            Array.isArray(data)
+              ? data.map((order: any) => ({
+                  id: Number(order.id),
+
+                  customerId:
+                    Number(order.customer_id),
+
+                  customerName:
+                    order.customer_name || "",
+
+                  phone:
+                    order.phone || "",
+
+                  address:
+                    order.address || "",
+
+                  products:
+                    Array.isArray(order.products)
+                      ? order.products.map(
+                          (product: any) => ({
+                            name:
+                              product.name || "",
+
+                            price:
+                              Number(
+                                product.price
+                              ) || 0,
+
+                            quantity:
+                              Number(
+                                product.quantity
+                              ) || 0,
+
+                            image:
+                              product.image || "",
+                          })
+                        )
+                      : [],
+
+                  subtotal:
+                    Number(order.subtotal) || 0,
+
+                  shipping:
+                    Number(order.shipping) || 0,
+
+                  discount:
+                    Number(order.discount) || 0,
+
+                  total:
+                    Number(order.total) || 0,
+
+                  deliveryArea:
+                    order.delivery_area || "",
+
+                  paymentMethod:
+                    order.payment_method || "",
+
+                  status:
+                    order.status || "Pending",
+
+                  createdAt:
+                    order.created_at || "",
+                }))
+              : [];
+
+          /*
+            শুধু logged-in customer-এর orders
+          */
 
           const customerOrders =
             allOrders.filter(
@@ -87,19 +169,42 @@ export default function AccountPage() {
                 Number(parsedCustomer.id)
             );
 
+          /*
+            Latest order আগে দেখানোর জন্য
+          */
+
+          customerOrders.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() -
+              new Date(a.createdAt).getTime()
+          );
+
           setOrders(customerOrders);
         })
         .catch((error) => {
-          console.error(error);
+          console.error(
+            "Order loading error:",
+            error
+          );
+
+          setOrders([]);
         })
         .finally(() => {
           setLoading(false);
         });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Customer loading error:",
+        error
+      );
+
       setLoading(false);
     }
   }, []);
+
+  // ==========================================
+  // ORDER STATUS COLOR
+  // ==========================================
 
   const getStatusClass = (
     status: Order["status"]
@@ -125,12 +230,23 @@ export default function AccountPage() {
     }
   };
 
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
   const logout = () => {
-    localStorage.removeItem("customerLoggedIn");
+    localStorage.removeItem(
+      "customerLoggedIn"
+    );
+
     localStorage.removeItem("customer");
 
     window.location.href = "/";
   };
+
+  // ==========================================
+  // STATISTICS
+  // ==========================================
 
   const totalSpent = orders.reduce(
     (sum, order) =>
@@ -154,6 +270,10 @@ export default function AccountPage() {
     (order) => order.status === "Delivered"
   ).length;
 
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -164,10 +284,13 @@ export default function AccountPage() {
     );
   }
 
+  // ==========================================
+  // LOGIN REQUIRED
+  // ==========================================
+
   if (!customer) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-
         <div className="bg-white rounded-2xl shadow-lg p-10 text-center max-w-md w-full">
 
           <div className="text-6xl mb-5">
@@ -190,21 +313,26 @@ export default function AccountPage() {
           </Link>
 
         </div>
-
       </main>
     );
   }
+
+  // ==========================================
+  // ACCOUNT PAGE
+  // ==========================================
 
   return (
     <main className="min-h-screen bg-gray-100 p-6 md:p-10">
 
       <div className="max-w-6xl mx-auto">
 
-        {/* Header */}
+        {/* =====================================
+            HEADER
+        ====================================== */}
+
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-10">
 
           <div>
-
             <h1 className="text-4xl font-bold text-red-600">
               👤 My Account
             </h1>
@@ -212,7 +340,6 @@ export default function AccountPage() {
             <p className="text-gray-500 mt-2">
               Welcome back, {customer.name}
             </p>
-
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -233,19 +360,21 @@ export default function AccountPage() {
             </button>
 
           </div>
-
         </div>
 
-        {/* Stats */}
+        {/* =====================================
+            STATS
+        ====================================== */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
 
           {/* Total Orders */}
+
           <div className="bg-white rounded-2xl shadow-lg p-6">
 
             <div className="flex items-center justify-between">
 
               <div>
-
                 <p className="text-gray-500 text-sm">
                   Total Orders
                 </p>
@@ -253,7 +382,6 @@ export default function AccountPage() {
                 <p className="text-3xl font-bold mt-2">
                   {orders.length}
                 </p>
-
               </div>
 
               <div className="text-4xl">
@@ -265,6 +393,7 @@ export default function AccountPage() {
           </div>
 
           {/* Total Spent */}
+
           <div className="bg-white rounded-2xl shadow-lg p-6">
 
             <div className="flex items-center justify-between">
@@ -290,6 +419,7 @@ export default function AccountPage() {
           </div>
 
           {/* Pending */}
+
           <div className="bg-white rounded-2xl shadow-lg p-6">
 
             <div className="flex items-center justify-between">
@@ -315,6 +445,7 @@ export default function AccountPage() {
           </div>
 
           {/* Delivered */}
+
           <div className="bg-white rounded-2xl shadow-lg p-6">
 
             <div className="flex items-center justify-between">
@@ -341,7 +472,10 @@ export default function AccountPage() {
 
         </div>
 
-        {/* Quick Actions */}
+        {/* =====================================
+            QUICK ACTIONS
+        ====================================== */}
+
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-10">
 
           <h2 className="text-2xl font-bold mb-6">
@@ -390,7 +524,10 @@ export default function AccountPage() {
 
         </div>
 
-        {/* Customer Information */}
+        {/* =====================================
+            CUSTOMER INFORMATION
+        ====================================== */}
+
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-10">
 
           <h2 className="text-2xl font-bold mb-6">
@@ -399,9 +536,7 @@ export default function AccountPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
 
-            {/* Customer ID */}
             <div className="bg-gray-50 rounded-xl p-5">
-
               <p className="text-gray-500 text-sm">
                 Customer ID
               </p>
@@ -409,12 +544,9 @@ export default function AccountPage() {
               <p className="font-bold text-lg mt-1">
                 #{customer.id}
               </p>
-
             </div>
 
-            {/* Name */}
             <div className="bg-gray-50 rounded-xl p-5">
-
               <p className="text-gray-500 text-sm">
                 Full Name
               </p>
@@ -422,12 +554,9 @@ export default function AccountPage() {
               <p className="font-bold text-lg mt-1">
                 {customer.name}
               </p>
-
             </div>
 
-            {/* Email */}
             <div className="bg-gray-50 rounded-xl p-5">
-
               <p className="text-gray-500 text-sm">
                 Email
               </p>
@@ -435,12 +564,9 @@ export default function AccountPage() {
               <p className="font-bold text-lg mt-1 break-all">
                 {customer.email}
               </p>
-
             </div>
 
-            {/* Phone */}
             <div className="bg-gray-50 rounded-xl p-5">
-
               <p className="text-gray-500 text-sm">
                 Phone
               </p>
@@ -448,14 +574,16 @@ export default function AccountPage() {
               <p className="font-bold text-lg mt-1">
                 {customer.phone}
               </p>
-
             </div>
 
           </div>
 
         </div>
 
-        {/* Order Status Summary */}
+        {/* =====================================
+            ORDER STATUS SUMMARY
+        ====================================== */}
+
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-10">
 
           <h2 className="text-2xl font-bold mb-6">
@@ -465,7 +593,6 @@ export default function AccountPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
             <div className="bg-yellow-50 rounded-xl p-5 text-center">
-
               <p className="text-3xl font-bold text-yellow-600">
                 {pendingOrders}
               </p>
@@ -473,11 +600,9 @@ export default function AccountPage() {
               <p className="font-semibold text-yellow-700 mt-1">
                 Pending
               </p>
-
             </div>
 
             <div className="bg-blue-50 rounded-xl p-5 text-center">
-
               <p className="text-3xl font-bold text-blue-600">
                 {confirmedOrders}
               </p>
@@ -485,11 +610,9 @@ export default function AccountPage() {
               <p className="font-semibold text-blue-700 mt-1">
                 Confirmed
               </p>
-
             </div>
 
             <div className="bg-purple-50 rounded-xl p-5 text-center">
-
               <p className="text-3xl font-bold text-purple-600">
                 {shippedOrders}
               </p>
@@ -497,11 +620,9 @@ export default function AccountPage() {
               <p className="font-semibold text-purple-700 mt-1">
                 Shipped
               </p>
-
             </div>
 
             <div className="bg-green-50 rounded-xl p-5 text-center">
-
               <p className="text-3xl font-bold text-green-600">
                 {deliveredOrders}
               </p>
@@ -509,14 +630,16 @@ export default function AccountPage() {
               <p className="font-semibold text-green-700 mt-1">
                 Delivered
               </p>
-
             </div>
 
           </div>
 
         </div>
 
-        {/* Recent Orders */}
+        {/* =====================================
+            RECENT ORDERS
+        ====================================== */}
+
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
 
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
@@ -551,6 +674,7 @@ export default function AccountPage() {
           </div>
 
           {orders.length === 0 ? (
+
             <div className="text-center py-12">
 
               <div className="text-6xl mb-5">
@@ -573,12 +697,12 @@ export default function AccountPage() {
               </Link>
 
             </div>
+
           ) : (
+
             <div className="space-y-5">
 
               {orders
-                .slice()
-                .reverse()
                 .slice(0, 5)
                 .map((order) => (
 
@@ -588,6 +712,7 @@ export default function AccountPage() {
                   >
 
                     {/* Order Header */}
+
                     <div className="flex flex-col md:flex-row md:justify-between gap-3 mb-5">
 
                       <div>
@@ -597,9 +722,11 @@ export default function AccountPage() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                          {new Date(
-                            order.createdAt
-                          ).toLocaleString()}
+                          {order.createdAt
+                            ? new Date(
+                                order.createdAt
+                              ).toLocaleString()
+                            : "Date unavailable"}
                         </p>
 
                       </div>
@@ -626,6 +753,7 @@ export default function AccountPage() {
                     </div>
 
                     {/* Products */}
+
                     <div className="space-y-3">
 
                       {order.products.map(
@@ -672,6 +800,7 @@ export default function AccountPage() {
                     </div>
 
                     {/* Order Info */}
+
                     <div className="mt-5 pt-5 border-t grid md:grid-cols-3 gap-4 text-sm">
 
                       <div>
@@ -724,6 +853,7 @@ export default function AccountPage() {
                 ))}
 
             </div>
+
           )}
 
         </div>

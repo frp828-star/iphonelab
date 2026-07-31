@@ -1,41 +1,24 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const filePath = path.join(
-  process.cwd(),
-  "data",
-  "orders.json"
-);
-
-function getOrders() {
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-
-  const file = fs.readFileSync(filePath, "utf-8");
-
-  if (!file.trim()) {
-    return [];
-  }
-
-  return JSON.parse(file);
-}
-
-function saveOrders(orders: any[]) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(orders, null, 2),
-    "utf-8"
-  );
-}
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // GET - সব Orders
 export async function GET() {
   try {
-    const orders = getOrders();
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    return NextResponse.json(orders);
+    if (error) {
+      console.error("GET orders error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data ?? []);
   } catch (error) {
     console.error(error);
 
@@ -49,28 +32,106 @@ export async function GET() {
 // POST - নতুন Order তৈরি
 export async function POST(request: Request) {
   try {
-    const orders = getOrders();
     const body = await request.json();
 
+    const {
+      customerId,
+      customerName,
+      phone,
+      address,
+      products,
+      subtotal,
+      shipping,
+      discount,
+      total,
+      deliveryArea,
+      paymentMethod,
+      paymentNumber,
+      transactionId,
+      status,
+      createdAt,
+    } = body;
+
+    if (!customerId) {
+      return NextResponse.json(
+        { error: "Customer ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!customerName || !phone || !address) {
+      return NextResponse.json(
+        {
+          error:
+            "Customer name, phone and address are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !products ||
+      !Array.isArray(products) ||
+      products.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "Order products are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!paymentMethod) {
+      return NextResponse.json(
+        { error: "Payment method is required" },
+        { status: 400 }
+      );
+    }
+
     const newOrder = {
-      id:
-        orders.length > 0
-          ? Math.max(...orders.map((order: any) => order.id)) + 1
-          : 1,
+      customer_id: Number(customerId),
 
-      ...body,
+      customer_name: customerName.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
 
-      status: body.status || "Pending",
+      products,
 
-      createdAt:
-        body.createdAt || new Date().toISOString(),
+      subtotal: Number(subtotal) || 0,
+      shipping: Number(shipping) || 0,
+      discount: Number(discount) || 0,
+      total: Number(total) || 0,
+
+      delivery_area: deliveryArea || "inside",
+      payment_method: paymentMethod,
+
+      payment_number:
+        paymentNumber?.trim() || null,
+
+      transaction_id:
+        transactionId?.trim() || null,
+
+      status: status || "Pending",
+
+      created_at:
+        createdAt || new Date().toISOString(),
     };
 
-    orders.push(newOrder);
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .insert([newOrder])
+      .select()
+      .single();
 
-    saveOrders(orders);
+    if (error) {
+      console.error("POST orders error:", error);
 
-    return NextResponse.json(newOrder, {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data, {
       status: 201,
     });
   } catch (error) {
@@ -83,34 +144,95 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Order Status / তথ্য Update
+// PUT - Order Update
 export async function PUT(request: Request) {
   try {
-    const orders = getOrders();
     const body = await request.json();
 
     const id = Number(body.id);
 
-    const index = orders.findIndex(
-      (order: any) => order.id === id
-    );
-
-    if (index === -1) {
+    if (!id) {
       return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
+        { error: "Order ID is required" },
+        { status: 400 }
       );
     }
 
-    orders[index] = {
-      ...orders[index],
+    const updateData: Record<string, unknown> = {
       ...body,
-      id,
     };
 
-    saveOrders(orders);
+    delete updateData.id;
 
-    return NextResponse.json(orders[index]);
+    // Frontend camelCase → Supabase snake_case
+
+    if ("customerId" in updateData) {
+      updateData.customer_id = Number(
+        updateData.customerId
+      );
+
+      delete updateData.customerId;
+    }
+
+    if ("customerName" in updateData) {
+      updateData.customer_name =
+        updateData.customerName;
+
+      delete updateData.customerName;
+    }
+
+    if ("deliveryArea" in updateData) {
+      updateData.delivery_area =
+        updateData.deliveryArea;
+
+      delete updateData.deliveryArea;
+    }
+
+    if ("paymentMethod" in updateData) {
+      updateData.payment_method =
+        updateData.paymentMethod;
+
+      delete updateData.paymentMethod;
+    }
+
+    if ("paymentNumber" in updateData) {
+      updateData.payment_number =
+        updateData.paymentNumber;
+
+      delete updateData.paymentNumber;
+    }
+
+    if ("transactionId" in updateData) {
+      updateData.transaction_id =
+        updateData.transactionId;
+
+      delete updateData.transactionId;
+    }
+
+    if ("createdAt" in updateData) {
+      updateData.created_at =
+        updateData.createdAt;
+
+      delete updateData.createdAt;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("PUT orders error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error(error);
 
@@ -124,24 +246,38 @@ export async function PUT(request: Request) {
 // DELETE - Order Delete
 export async function DELETE(request: Request) {
   try {
-    const orders = getOrders();
+    const body = await request.json();
 
-    const { id } = await request.json();
+    const id = Number(body.id);
 
-    const orderId = Number(id);
+    if (!id) {
+      return NextResponse.json(
+        { error: "Order ID is required" },
+        { status: 400 }
+      );
+    }
 
-    const filteredOrders = orders.filter(
-      (order: any) => order.id !== orderId
-    );
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .delete()
+      .eq("id", id)
+      .select();
 
-    if (filteredOrders.length === orders.length) {
+    if (error) {
+      console.error("DELETE orders error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!data || data.length === 0) {
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
       );
     }
-
-    saveOrders(filteredOrders);
 
     return NextResponse.json({
       success: true,
