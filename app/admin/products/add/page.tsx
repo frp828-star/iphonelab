@@ -14,7 +14,10 @@ export default function AddProductPage() {
   const [stock, setStock] = useState(true);
   const [freeDelivery, setFreeDelivery] = useState(false);
   const [warranty, setWarranty] = useState("");
+
   const [image, setImage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
 
   const [featured, setFeatured] = useState(true);
 
@@ -24,71 +27,171 @@ export default function AddProductPage() {
   const [premiumProduct, setPremiumProduct] = useState(false);
 
   const [description, setDescription] = useState("");
+
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Image select
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    // Only allow images
+    if (!file.type.startsWith("image/")) {
+      alert("❌ Please select an image file.");
+      return;
+    }
+
+    // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
+      alert("❌ Image must be smaller than 5MB.");
+      return;
+    }
+
+    setSelectedFile(file);
+
+    const previewUrl = URL.createObjectURL(file);
+    setPreview(previewUrl);
+
+    // Clear old URL if any
+    setImage("");
+  };
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
 
+    if (!selectedFile) {
+      alert("❌ Please select a product image.");
+      return;
+    }
+
     setLoading(true);
 
-    const product = {
-      name,
-      category,
-      price: Number(price),
-      oldPrice: oldPrice ? Number(oldPrice) : undefined,
-      discount: discount ? Number(discount) : undefined,
-      rating: rating ? Number(rating) : 5,
-      reviews: reviews ? Number(reviews) : 0,
-
-      stock,
-      freeDelivery,
-      warranty,
-      image,
-
-      featured,
-
-      // Product Labels
-      hotSale,
-      bestSeller,
-      premiumProduct,
-
-      description,
-    };
-
     try {
+      // ==========================================
+      // STEP 1: Upload image to Supabase Storage
+      // ==========================================
+
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+
+      setUploading(false);
+
+      if (!uploadRes.ok || !uploadData.url) {
+        console.error("Upload response:", uploadData);
+
+        alert(
+          `❌ Image upload failed: ${
+            uploadData.error || "Unknown error"
+          }`
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      const uploadedImageUrl = uploadData.url;
+
+      setImage(uploadedImageUrl);
+
+      // ==========================================
+      // STEP 2: Create product
+      // ==========================================
+
+      const product = {
+        name,
+        category,
+
+        price: Number(price),
+
+        oldPrice: oldPrice
+          ? Number(oldPrice)
+          : undefined,
+
+        discount: discount
+          ? Number(discount)
+          : undefined,
+
+        rating: rating
+          ? Number(rating)
+          : 5,
+
+        reviews: reviews
+          ? Number(reviews)
+          : 0,
+
+        stock,
+        freeDelivery,
+        warranty,
+
+        // Automatically uploaded image URL
+        image: uploadedImageUrl,
+
+        featured,
+
+        // Product Labels
+        hotSale,
+        bestSeller,
+        premiumProduct,
+
+        description,
+      };
+
       const res = await fetch("/api/products", {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify(product),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        alert("✅ Product Added Successfully");
+        alert("✅ Product Added Successfully!");
 
         window.location.href = "/admin/products";
       } else {
-        alert("❌ Failed to Add Product");
+        console.error("Product add error:", data);
+
+        alert(
+          `❌ Failed to Add Product: ${
+            data.error || "Unknown error"
+          }`
+        );
       }
     } catch (error) {
       console.error(error);
-      alert("❌ Something went wrong");
+
+      alert("❌ Something went wrong.");
     } finally {
+      setUploading(false);
       setLoading(false);
     }
   };
 
   return (
     <main className="min-h-screen bg-gray-100 px-4 py-6 sm:px-6 md:px-10">
-
       <div className="max-w-5xl mx-auto">
 
         {/* Page Header */}
         <div className="mb-6">
-
           <Link
             href="/admin/products"
             className="inline-flex items-center text-red-600 font-semibold hover:text-red-700 mb-4"
@@ -97,7 +200,6 @@ export default function AddProductPage() {
           </Link>
 
           <div className="bg-white rounded-2xl shadow-sm border p-6 md:p-8">
-
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
               <div>
@@ -115,7 +217,6 @@ export default function AddProductPage() {
               </div>
 
             </div>
-
           </div>
         </div>
 
@@ -339,34 +440,64 @@ export default function AddProductPage() {
               </h2>
 
               <p className="text-gray-500 text-sm mt-1">
-                Add the product image path.
+                Select a product image. It will be uploaded automatically.
               </p>
             </div>
 
-            <input
-              type="text"
-              placeholder="/products/product.jpg"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-            />
+            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-red-400 transition">
 
-            {image && (
-              <div className="mt-5 border rounded-xl p-4 bg-gray-50">
+              <input
+                id="product-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
 
-                <p className="text-sm font-semibold mb-3">
-                  Image Preview
+              <label
+                htmlFor="product-image"
+                className="cursor-pointer block"
+              >
+
+                <div className="text-5xl mb-3">
+                  🖼️
+                </div>
+
+                <p className="font-bold text-gray-800">
+                  Click to select product image
                 </p>
 
-                <img
-                  src={image}
-                  alt="Product preview"
-                  className="w-32 h-32 object-contain bg-white rounded-xl border"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
+                <p className="text-sm text-gray-500 mt-2">
+                  JPG, PNG, WEBP or other image formats • Max 5MB
+                </p>
+
+                {selectedFile && (
+                  <p className="text-sm text-red-600 font-semibold mt-3">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+
+              </label>
+
+            </div>
+
+            {/* Image Preview */}
+            {preview && (
+              <div className="mt-6 border rounded-2xl p-5 bg-gray-50">
+
+                <p className="text-sm font-bold mb-4">
+                  👁️ Image Preview
+                </p>
+
+                <div className="flex justify-center">
+
+                  <img
+                    src={preview}
+                    alt="Product preview"
+                    className="w-64 h-64 object-contain bg-white rounded-2xl border"
+                  />
+
+                </div>
 
               </div>
             )}
@@ -553,10 +684,12 @@ export default function AddProductPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploading}
                 className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-xl font-semibold transition"
               >
-                {loading
+                {uploading
+                  ? "Uploading Image..."
+                  : loading
                   ? "Adding Product..."
                   : "➕ Add Product"}
               </button>
