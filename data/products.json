@@ -28,7 +28,7 @@
     "stock": true,
     "freeDelivery": true,
     "warranty": "6 Months",
-    "image": "/products/battery.jpg.jfif",
+    "image": "/products/battery.jpg",
     "featured": true,
     "sale": false,
     "description": "Premium quality iPhone 14 replacement battery with reliable performance."
@@ -45,7 +45,7 @@
     "stock": true,
     "freeDelivery": false,
     "warranty": "1 Year",
-    "image": "/products/airpods.jpg.jfif",
+    "image": "/products/airpods.jpg",
     "featured": true,
     "sale": false,
     "description": "Premium AirPods Pro 2 with excellent sound quality and comfortable design."
@@ -62,7 +62,7 @@
     "stock": true,
     "freeDelivery": true,
     "warranty": "6 Months",
-    "image": "/products/battery.jpg.jfif",
+    "image": "/products/battery.jpg",
     "featured": true,
     "sale": false,
     "description": "Test product"

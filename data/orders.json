@@ -33,7 +33,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 2,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 6400,
@@ -105,7 +105,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 1,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 3200,
@@ -154,7 +154,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 1,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 3200,
@@ -179,7 +179,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 5,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 16000,
@@ -204,7 +204,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 3,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 9600,
@@ -229,7 +229,7 @@
         "name": "Test iPhone Battery",
         "price": 3000,
         "quantity": 4,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 12000,
@@ -304,7 +304,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 5,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 16000,
@@ -354,7 +354,7 @@
         "name": "iPhone 14 Battery",
         "price": 3200,
         "quantity": 4,
-        "image": "/products/battery.jpg.jfif"
+        "image": "/products/battery.jpg"
       }
     ],
     "subtotal": 12800,
