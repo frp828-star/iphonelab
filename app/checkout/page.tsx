@@ -45,10 +45,7 @@ export default function CheckoutPage() {
           setPhone(customer.phone);
         }
       } catch (error) {
-        console.error(
-          "Failed to load customer:",
-          error
-        );
+        console.error("Failed to load customer:", error);
       }
     }
   }, []);
@@ -118,11 +115,8 @@ export default function CheckoutPage() {
 
     const order = {
       customerId,
-
       customerName: customerName.trim(),
-
       phone: phone.trim(),
-
       address: address.trim(),
 
       products: cart.map((item) => ({
@@ -133,15 +127,10 @@ export default function CheckoutPage() {
       })),
 
       subtotal,
-
       shipping,
-
       discount,
-
       total,
-
       deliveryArea,
-
       paymentMethod,
 
       paymentNumber:
@@ -219,7 +208,6 @@ export default function CheckoutPage() {
                   className="flex justify-between border-b py-3"
                 >
                   <div>
-
                     <p className="font-semibold">
                       {item.name}
                     </p>
@@ -227,7 +215,6 @@ export default function CheckoutPage() {
                     <p className="text-gray-500">
                       Qty: {item.quantity}
                     </p>
-
                   </div>
 
                   <p className="font-bold">
@@ -236,7 +223,6 @@ export default function CheckoutPage() {
                       item.price * item.quantity
                     ).toLocaleString()}
                   </p>
-
                 </div>
               ))}
 
@@ -267,13 +253,11 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-between text-xl font-bold text-red-600 border-t pt-3">
-
                   <span>Total</span>
 
                   <span>
                     ৳ {total.toLocaleString()}
                   </span>
-
                 </div>
 
               </div>
@@ -282,14 +266,15 @@ export default function CheckoutPage() {
 
         </div>
 
+        {/* Checkout Form */}
         <form
+          id="checkout-form"
           onSubmit={handleSubmit}
           className="space-y-6"
         >
 
           {/* Customer Name */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Full Name
             </label>
@@ -304,12 +289,10 @@ export default function CheckoutPage() {
               className="w-full border rounded-lg p-4"
               required
             />
-
           </div>
 
           {/* Phone */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Phone Number
             </label>
@@ -324,12 +307,10 @@ export default function CheckoutPage() {
               className="w-full border rounded-lg p-4"
               required
             />
-
           </div>
 
           {/* Address */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Delivery Address
             </label>
@@ -344,12 +325,10 @@ export default function CheckoutPage() {
               className="w-full border rounded-lg p-4"
               required
             />
-
           </div>
 
           {/* Delivery Area */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Delivery Area
             </label>
@@ -361,7 +340,6 @@ export default function CheckoutPage() {
               }
               className="w-full border rounded-lg p-4"
             >
-
               <option value="inside">
                 📍 Inside Dhaka (৳70)
               </option>
@@ -369,14 +347,11 @@ export default function CheckoutPage() {
               <option value="outside">
                 🚚 Outside Dhaka (৳120)
               </option>
-
             </select>
-
           </div>
 
           {/* Coupon */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Coupon Code
             </label>
@@ -396,21 +371,15 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => {
-
                   if (coupon.trim()) {
-
                     alert(
                       "Coupon system will be connected later."
                     );
-
                   } else {
-
                     alert(
                       "Please enter a coupon code."
                     );
-
                   }
-
                 }}
                 className="bg-black text-white px-5 rounded-lg font-semibold"
               >
@@ -418,12 +387,10 @@ export default function CheckoutPage() {
               </button>
 
             </div>
-
           </div>
 
           {/* Payment */}
           <div>
-
             <label className="block mb-2 font-semibold">
               Payment Method
             </label>
@@ -436,7 +403,6 @@ export default function CheckoutPage() {
               className="w-full border rounded-lg p-4"
               required
             >
-
               <option value="">
                 Select Payment Method
               </option>
@@ -456,16 +422,13 @@ export default function CheckoutPage() {
               <option value="mastercard">
                 💳 MasterCard
               </option>
-
             </select>
-
           </div>
 
           {/* bKash / Nagad */}
           {(paymentMethod === "bkash" ||
             paymentMethod === "nagad") && (
             <>
-
               <input
                 type="tel"
                 placeholder={
@@ -491,7 +454,6 @@ export default function CheckoutPage() {
                 className="w-full border rounded-lg p-4"
                 required
               />
-
             </>
           )}
 
@@ -499,13 +461,11 @@ export default function CheckoutPage() {
           {(paymentMethod === "visa" ||
             paymentMethod === "mastercard") && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-
               <p className="text-sm text-yellow-800">
                 Card payment integration will be
                 connected later. No card number or CVV
                 will be stored in our order database.
               </p>
-
             </div>
           )}
 

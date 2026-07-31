@@ -13,11 +13,8 @@ export default function Header() {
 
   useEffect(() => {
     const checkCustomer = () => {
-      const isLoggedIn =
-        localStorage.getItem("customerLoggedIn");
-
-      const savedCustomer =
-        localStorage.getItem("customer");
+      const isLoggedIn = localStorage.getItem("customerLoggedIn");
+      const savedCustomer = localStorage.getItem("customer");
 
       if (isLoggedIn === "true" && savedCustomer) {
         try {
@@ -27,6 +24,8 @@ export default function Header() {
           setCustomerName(customer.name || "");
         } catch (error) {
           console.error(error);
+          setLoggedIn(false);
+          setCustomerName("");
         }
       } else {
         setLoggedIn(false);
@@ -36,15 +35,8 @@ export default function Header() {
 
     checkCustomer();
 
-    window.addEventListener(
-      "customerLoginChanged",
-      checkCustomer
-    );
-
-    window.addEventListener(
-      "storage",
-      checkCustomer
-    );
+    window.addEventListener("customerLoginChanged", checkCustomer);
+    window.addEventListener("storage", checkCustomer);
 
     return () => {
       window.removeEventListener(
@@ -52,10 +44,7 @@ export default function Header() {
         checkCustomer
       );
 
-      window.removeEventListener(
-        "storage",
-        checkCustomer
-      );
+      window.removeEventListener("storage", checkCustomer);
     };
   }, []);
 
@@ -67,9 +56,7 @@ export default function Header() {
     setCustomerName("");
     setMenuOpen(false);
 
-    window.dispatchEvent(
-      new Event("customerLoginChanged")
-    );
+    window.dispatchEvent(new Event("customerLoginChanged"));
 
     window.location.href = "/";
   };
@@ -79,86 +66,237 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white border-b shadow-sm sticky top-0 z-40">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+        {/* =========================================
+            MAIN HEADER
+        ========================================== */}
 
-        {/* Main Header */}
-        <div className="flex items-center justify-between gap-5">
+        <div className="min-h-[78px] flex items-center justify-between gap-4">
 
-          {/* Logo */}
+          {/* =======================================
+              iPhone Lab LOGO
+          ======================================== */}
+
           <Link
             href="/"
             onClick={closeMenu}
-            className="text-3xl font-bold text-red-600 whitespace-nowrap"
+            className="group flex items-center shrink-0"
+            aria-label="iPhone Lab Home"
           >
-            iPhone Lab
+            <span className="flex items-center leading-none whitespace-nowrap">
+
+              {/* iPhone */}
+
+              <span
+                className="
+                  text-[28px]
+                  sm:text-[31px]
+                  font-black
+                  tracking-[-1.5px]
+                  text-gray-950
+                  group-hover:text-gray-800
+                  transition-colors
+                "
+              >
+                iPhone
+              </span>
+
+              {/* Lab */}
+
+              <span
+                className="
+                  ml-1
+                  text-[28px]
+                  sm:text-[31px]
+                  font-black
+                  tracking-[-1.5px]
+                  text-red-600
+                  group-hover:text-red-700
+                  transition-colors
+                "
+              >
+                Lab
+              </span>
+
+            </span>
           </Link>
 
-          {/* Desktop Search */}
-          <div className="hidden md:flex items-center border border-gray-300 rounded-xl overflow-hidden bg-white shadow-sm">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products..."
-              className="px-5 py-3 w-56 lg:w-72 outline-none text-base"
-            />
+          {/* =======================================
+              DESKTOP SEARCH
+          ======================================== */}
 
-            <span className="px-4 text-gray-500 text-2xl">
-              🔍
-            </span>
+          <div className="hidden md:flex flex-1 max-w-md lg:max-w-lg mx-3">
+
+            <div
+              className="
+                flex
+                w-full
+                items-center
+                overflow-hidden
+                rounded-xl
+                border
+                border-gray-300
+                bg-gray-50
+                transition
+                focus-within:border-red-500
+                focus-within:ring-2
+                focus-within:ring-red-100
+              "
+            >
+              <span className="pl-4 text-gray-400 text-lg">
+                🔍
+              </span>
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search products..."
+                className="
+                  w-full
+                  bg-transparent
+                  px-3
+                  py-3
+                  outline-none
+                  text-gray-900
+                  placeholder:text-gray-400
+                "
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="mr-3 text-gray-400 hover:text-red-600 transition"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-7">
+          {/* =======================================
+              DESKTOP NAVIGATION
+          ======================================== */}
+
+          <nav className="hidden lg:flex items-center gap-1">
 
             <Link
               href="/"
-              className="font-bold text-lg hover:text-red-600 transition"
+              className="
+                px-3
+                py-2
+                rounded-lg
+                font-semibold
+                text-gray-700
+                hover:bg-red-50
+                hover:text-red-600
+                transition
+              "
             >
-              🏠 Home
+              Home
             </Link>
 
             <Link
               href="/shop"
-              className="font-bold text-lg hover:text-red-600 transition"
+              className="
+                px-3
+                py-2
+                rounded-lg
+                font-semibold
+                text-gray-700
+                hover:bg-red-50
+                hover:text-red-600
+                transition
+              "
             >
-              🛍️ Shop
+              Shop
             </Link>
 
             <Link
               href="/wishlist"
-              className="font-bold text-lg hover:text-red-600 transition"
+              className="
+                px-3
+                py-2
+                rounded-lg
+                font-semibold
+                text-gray-700
+                hover:bg-red-50
+                hover:text-red-600
+                transition
+              "
             >
               ❤️ Wishlist
             </Link>
 
             <Link
               href="/cart"
-              className="font-bold text-lg hover:text-red-600 transition"
+              className="
+                px-3
+                py-2
+                rounded-lg
+                font-semibold
+                text-gray-700
+                hover:bg-red-50
+                hover:text-red-600
+                transition
+              "
             >
               🛒 Cart
             </Link>
 
           </nav>
 
-          {/* Customer Area */}
-          <div className="flex items-center gap-3">
+          {/* =======================================
+              CUSTOMER AREA
+          ======================================== */}
+
+          <div className="flex items-center gap-2 shrink-0">
 
             {loggedIn ? (
               <>
                 <Link
                   href="/account"
-                  className="bg-gray-100 hover:bg-gray-200 px-5 py-3 rounded-xl font-bold text-base hidden sm:block transition"
+                  className="
+                    hidden
+                    sm:flex
+                    items-center
+                    gap-2
+                    bg-gray-100
+                    hover:bg-gray-200
+                    px-4
+                    py-2.5
+                    rounded-xl
+                    font-semibold
+                    text-gray-800
+                    transition
+                  "
                 >
-                  👤 {customerName || "Account"}
+                  <span>👤</span>
+
+                  <span className="max-w-[100px] truncate">
+                    {customerName || "Account"}
+                  </span>
                 </Link>
 
                 <button
                   type="button"
                   onClick={logout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold text-base transition"
+                  className="
+                    hidden
+                    sm:block
+                    bg-red-600
+                    hover:bg-red-700
+                    text-white
+                    px-4
+                    py-2.5
+                    rounded-xl
+                    font-semibold
+                    transition
+                  "
                 >
                   Logout
                 </button>
@@ -167,14 +305,39 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className="border border-red-600 text-red-600 hover:bg-red-50 px-5 py-3 rounded-xl font-bold text-base transition"
+                  onClick={closeMenu}
+                  className="
+                    hidden
+                    sm:block
+                    border
+                    border-red-600
+                    text-red-600
+                    hover:bg-red-50
+                    px-4
+                    py-2.5
+                    rounded-xl
+                    font-semibold
+                    transition
+                  "
                 >
                   Login
                 </Link>
 
                 <Link
                   href="/signup"
-                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold text-base transition"
+                  onClick={closeMenu}
+                  className="
+                    hidden
+                    sm:block
+                    bg-red-600
+                    hover:bg-red-700
+                    text-white
+                    px-4
+                    py-2.5
+                    rounded-xl
+                    font-semibold
+                    transition
+                  "
                 >
                   Signup
                 </Link>
@@ -182,91 +345,271 @@ export default function Header() {
             )}
 
             {/* Mobile Menu Button */}
+
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden text-3xl font-bold ml-1 px-2"
+              className="
+                lg:hidden
+                w-11
+                h-11
+                flex
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-gray-200
+                bg-white
+                text-2xl
+                hover:bg-gray-50
+                transition
+              "
               aria-label="Toggle menu"
+              aria-expanded={menuOpen}
             >
               {menuOpen ? "✕" : "☰"}
             </button>
 
           </div>
-
         </div>
 
-        {/* Mobile Search */}
-        <div className="md:hidden mt-5">
-          <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden bg-white shadow-sm">
+        {/* =========================================
+            MOBILE SEARCH
+        ========================================== */}
+
+        <div className="md:hidden pb-4">
+
+          <div
+            className="
+              flex
+              items-center
+              overflow-hidden
+              rounded-xl
+              border
+              border-gray-300
+              bg-gray-50
+              focus-within:border-red-500
+              focus-within:ring-2
+              focus-within:ring-red-100
+              transition
+            "
+          >
+            <span className="pl-4 text-gray-400 text-lg">
+              🔍
+            </span>
+
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products..."
-              className="flex-1 px-5 py-3 outline-none text-base"
+              className="
+                flex-1
+                bg-transparent
+                px-3
+                py-3
+                outline-none
+                text-gray-900
+                placeholder:text-gray-400
+              "
             />
 
-            <span className="px-4 text-gray-500 text-2xl">
-              🔍
-            </span>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="mr-3 text-gray-400 hover:text-red-600"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* =========================================
+            MOBILE MENU
+        ========================================== */}
+
         {menuOpen && (
-          <div className="md:hidden mt-5 border-t pt-4">
+          <div className="lg:hidden border-t border-gray-200 py-4">
 
             <nav className="flex flex-col gap-1">
 
               <Link
                 href="/"
                 onClick={closeMenu}
-                className="font-bold text-lg py-3 px-3 rounded-lg hover:bg-red-50 hover:text-red-600"
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  px-4
+                  py-3
+                  rounded-xl
+                  font-semibold
+                  text-gray-800
+                  hover:bg-red-50
+                  hover:text-red-600
+                  transition
+                "
               >
-                🏠 Home
+                🏠
+                <span>Home</span>
               </Link>
 
               <Link
                 href="/shop"
                 onClick={closeMenu}
-                className="font-bold text-lg py-3 px-3 rounded-lg hover:bg-red-50 hover:text-red-600"
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  px-4
+                  py-3
+                  rounded-xl
+                  font-semibold
+                  text-gray-800
+                  hover:bg-red-50
+                  hover:text-red-600
+                  transition
+                "
               >
-                🛍️ Shop
+                🛍️
+                <span>Shop</span>
               </Link>
 
               <Link
                 href="/wishlist"
                 onClick={closeMenu}
-                className="font-bold text-lg py-3 px-3 rounded-lg hover:bg-red-50 hover:text-red-600"
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  px-4
+                  py-3
+                  rounded-xl
+                  font-semibold
+                  text-gray-800
+                  hover:bg-red-50
+                  hover:text-red-600
+                  transition
+                "
               >
-                ❤️ Wishlist
+                ❤️
+                <span>Wishlist</span>
               </Link>
 
               <Link
                 href="/cart"
                 onClick={closeMenu}
-                className="font-bold text-lg py-3 px-3 rounded-lg hover:bg-red-50 hover:text-red-600"
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  px-4
+                  py-3
+                  rounded-xl
+                  font-semibold
+                  text-gray-800
+                  hover:bg-red-50
+                  hover:text-red-600
+                  transition
+                "
               >
-                🛒 Cart
+                🛒
+                <span>Cart</span>
               </Link>
 
-              {loggedIn && (
-                <Link
-                  href="/account"
-                  onClick={closeMenu}
-                  className="sm:hidden font-bold text-lg py-3 px-3 rounded-lg hover:bg-gray-100"
-                >
-                  👤 {customerName || "Account"}
-                </Link>
+              <div className="my-2 border-t border-gray-200" />
+
+              {loggedIn ? (
+                <>
+                  <Link
+                    href="/account"
+                    onClick={closeMenu}
+                    className="
+                      flex
+                      items-center
+                      gap-3
+                      px-4
+                      py-3
+                      rounded-xl
+                      font-semibold
+                      text-gray-800
+                      hover:bg-gray-100
+                      transition
+                    "
+                  >
+                    👤
+                    <span>
+                      {customerName || "Account"}
+                    </span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="
+                      w-full
+                      text-left
+                      px-4
+                      py-3
+                      rounded-xl
+                      font-semibold
+                      text-red-600
+                      hover:bg-red-50
+                      transition
+                    "
+                  >
+                    🚪 Logout
+                  </button>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 px-1">
+
+                  <Link
+                    href="/login"
+                    onClick={closeMenu}
+                    className="
+                      border
+                      border-red-600
+                      text-red-600
+                      hover:bg-red-50
+                      py-3
+                      rounded-xl
+                      text-center
+                      font-bold
+                      transition
+                    "
+                  >
+                    Login
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    onClick={closeMenu}
+                    className="
+                      bg-red-600
+                      hover:bg-red-700
+                      text-white
+                      py-3
+                      rounded-xl
+                      text-center
+                      font-bold
+                      transition
+                    "
+                  >
+                    Signup
+                  </Link>
+
+                </div>
               )}
 
             </nav>
-
           </div>
         )}
 
       </div>
-
     </header>
   );
 }

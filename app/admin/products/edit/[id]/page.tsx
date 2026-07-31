@@ -9,17 +9,20 @@ type Product = {
   name: string;
   category: string;
   price: number;
-  oldPrice?: number;
-  discount?: number;
-  rating?: number;
-  reviews?: number;
+  oldPrice?: number | null;
+  discount?: number | null;
+  rating?: number | null;
+  reviews?: number | null;
   stock?: boolean;
   freeDelivery?: boolean;
-  warranty?: string;
+  warranty?: string | null;
   image: string;
   featured?: boolean;
   sale?: boolean;
-  description?: string;
+  hotSale?: boolean;
+  bestSeller?: boolean;
+  premiumProduct?: boolean;
+  description?: string | null;
 };
 
 export default function EditProductPage() {
@@ -32,24 +35,43 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Basic Information
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Display");
+
+  // Pricing
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
   const [discount, setDiscount] = useState("");
+
+  // Product Details
   const [rating, setRating] = useState("5");
   const [reviews, setReviews] = useState("0");
-  const [stock, setStock] = useState(true);
-  const [freeDelivery, setFreeDelivery] = useState(false);
   const [warranty, setWarranty] = useState("");
+
+  // Image
   const [image, setImage] = useState("");
-  const [featured, setFeatured] = useState(true);
-  const [sale, setSale] = useState(false);
+
+  // Description
   const [description, setDescription] = useState("");
 
+  // Product Options
+  const [stock, setStock] = useState(true);
+  const [freeDelivery, setFreeDelivery] = useState(false);
+  const [featured, setFeatured] = useState(true);
+  const [sale, setSale] = useState(false);
+
+  // Product Labels
+  const [hotSale, setHotSale] = useState(false);
+  const [bestSeller, setBestSeller] = useState(false);
+  const [premiumProduct, setPremiumProduct] = useState(false);
+
+  // Load Product
   useEffect(() => {
     async function loadProduct() {
       try {
+        setLoading(true);
+
         const res = await fetch("/api/products", {
           cache: "no-store",
         });
@@ -69,30 +91,62 @@ export default function EditProductPage() {
 
         setProduct(found);
 
+        // Basic Information
         setName(found.name);
         setCategory(found.category);
+
+        // Pricing
         setPrice(String(found.price));
+
         setOldPrice(
-          found.oldPrice !== undefined ? String(found.oldPrice) : ""
+          found.oldPrice !== null &&
+            found.oldPrice !== undefined
+            ? String(found.oldPrice)
+            : ""
         );
+
         setDiscount(
-          found.discount !== undefined ? String(found.discount) : ""
+          found.discount !== null &&
+            found.discount !== undefined
+            ? String(found.discount)
+            : ""
         );
+
+        // Product Details
         setRating(
-          found.rating !== undefined ? String(found.rating) : "5"
+          found.rating !== null &&
+            found.rating !== undefined
+            ? String(found.rating)
+            : "5"
         );
+
         setReviews(
-          found.reviews !== undefined ? String(found.reviews) : "0"
+          found.reviews !== null &&
+            found.reviews !== undefined
+            ? String(found.reviews)
+            : "0"
         );
+
+        setWarranty(found.warranty ?? "");
+
+        // Image
+        setImage(found.image);
+
+        // Description
+        setDescription(found.description ?? "");
+
+        // Options
         setStock(found.stock ?? true);
         setFreeDelivery(found.freeDelivery ?? false);
-        setWarranty(found.warranty ?? "");
-        setImage(found.image);
         setFeatured(found.featured ?? true);
         setSale(found.sale ?? false);
-        setDescription(found.description ?? "");
+
+        // Product Labels
+        setHotSale(found.hotSale ?? false);
+        setBestSeller(found.bestSeller ?? false);
+        setPremiumProduct(found.premiumProduct ?? false);
       } catch (error) {
-        console.error(error);
+        console.error("Load product error:", error);
       } finally {
         setLoading(false);
       }
@@ -105,6 +159,7 @@ export default function EditProductPage() {
     }
   }, [id]);
 
+  // Save Changes
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
@@ -114,20 +169,59 @@ export default function EditProductPage() {
 
     const updatedProduct = {
       id,
+
+      // Basic Information
       name: name.trim(),
       category,
+
+      // Pricing
       price: Number(price),
-      oldPrice: oldPrice ? Number(oldPrice) : undefined,
-      discount: discount ? Number(discount) : undefined,
-      rating: rating ? Number(rating) : 5,
-      reviews: reviews ? Number(reviews) : 0,
+
+      oldPrice:
+        oldPrice.trim() !== ""
+          ? Number(oldPrice)
+          : null,
+
+      discount:
+        discount.trim() !== ""
+          ? Number(discount)
+          : null,
+
+      // Product Details
+      rating:
+        rating.trim() !== ""
+          ? Number(rating)
+          : 5,
+
+      reviews:
+        reviews.trim() !== ""
+          ? Number(reviews)
+          : 0,
+
+      warranty:
+        warranty.trim() !== ""
+          ? warranty.trim()
+          : null,
+
+      // Image
+      image: image.trim(),
+
+      // Description
+      description:
+        description.trim() !== ""
+          ? description.trim()
+          : null,
+
+      // Options
       stock,
       freeDelivery,
-      warranty: warranty.trim(),
-      image: image.trim(),
       featured,
       sale,
-      description: description.trim(),
+
+      // Product Labels
+      hotSale,
+      bestSeller,
+      premiumProduct,
     };
 
     try {
@@ -152,7 +246,7 @@ export default function EditProductPage() {
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
-      console.error(error);
+      console.error("Update product error:", error);
 
       alert(
         error instanceof Error
@@ -164,12 +258,14 @@ export default function EditProductPage() {
     }
   };
 
-  /* Loading */
+  // Loading
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
-          <div className="text-5xl mb-4">⏳</div>
+          <div className="text-5xl mb-4">
+            ⏳
+          </div>
 
           <h1 className="text-2xl font-bold">
             Loading Product...
@@ -183,12 +279,14 @@ export default function EditProductPage() {
     );
   }
 
-  /* Product Not Found */
+  // Product Not Found
   if (!product) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-lg p-10 text-center max-w-md w-full">
-          <div className="text-6xl mb-5">😢</div>
+          <div className="text-6xl mb-5">
+            😢
+          </div>
 
           <h1 className="text-3xl font-bold mb-3">
             Product Not Found
@@ -213,7 +311,7 @@ export default function EditProductPage() {
     <main className="min-h-screen bg-gray-100 p-5 md:p-10">
       <div className="max-w-5xl mx-auto">
 
-        {/* Top Navigation */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 
           <div>
@@ -224,6 +322,10 @@ export default function EditProductPage() {
             <h1 className="text-3xl md:text-4xl font-bold text-red-600">
               ✏️ Edit Product
             </h1>
+
+            <p className="text-gray-500 mt-2">
+              Update product information and settings.
+            </p>
           </div>
 
           <Link
@@ -237,10 +339,14 @@ export default function EditProductPage() {
 
         <form onSubmit={handleSubmit}>
 
-          {/* Product Basic Information */}
+          {/* ============================= */}
+          {/* Product Information */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 📋 Product Information
               </h2>
@@ -248,10 +354,12 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Update the basic information of this product.
               </p>
+
             </div>
 
             {/* Product Name */}
             <div className="mb-6">
+
               <label className="block font-semibold mb-2">
                 Product Name
               </label>
@@ -259,39 +367,67 @@ export default function EditProductPage() {
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) =>
+                  setName(e.target.value)
+                }
                 required
                 placeholder="iPhone 16 Display"
                 className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
               />
+
             </div>
 
             {/* Category */}
             <div>
+
               <label className="block font-semibold mb-2">
                 Category
               </label>
 
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) =>
+                  setCategory(e.target.value)
+                }
                 className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
               >
-                <option value="Display">Display</option>
-                <option value="Battery">Battery</option>
-                <option value="Charger">Charger</option>
-                <option value="AirPods">AirPods</option>
-                <option value="Back Glass">Back Glass</option>
-                <option value="Accessories">Accessories</option>
+                <option value="Display">
+                  Display
+                </option>
+
+                <option value="Battery">
+                  Battery
+                </option>
+
+                <option value="Charger">
+                  Charger
+                </option>
+
+                <option value="AirPods">
+                  AirPods
+                </option>
+
+                <option value="Back Glass">
+                  Back Glass
+                </option>
+
+                <option value="Accessories">
+                  Accessories
+                </option>
               </select>
+
             </div>
 
           </section>
 
+          {/* ============================= */}
           {/* Pricing */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 💰 Pricing
               </h2>
@@ -299,12 +435,14 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Manage current price, old price and discount.
               </p>
+
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
 
               {/* Current Price */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Current Price (৳)
                 </label>
@@ -313,14 +451,18 @@ export default function EditProductPage() {
                   type="number"
                   min="0"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) =>
+                    setPrice(e.target.value)
+                  }
                   required
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
               {/* Old Price */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Old Price (৳)
                 </label>
@@ -329,13 +471,17 @@ export default function EditProductPage() {
                   type="number"
                   min="0"
                   value={oldPrice}
-                  onChange={(e) => setOldPrice(e.target.value)}
+                  onChange={(e) =>
+                    setOldPrice(e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
               {/* Discount */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Discount (%)
                 </label>
@@ -345,19 +491,26 @@ export default function EditProductPage() {
                   min="0"
                   max="100"
                   value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
+                  onChange={(e) =>
+                    setDiscount(e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
             </div>
 
           </section>
 
-          {/* Rating & Warranty */}
+          {/* ============================= */}
+          {/* Product Details */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 ⭐ Product Details
               </h2>
@@ -365,12 +518,14 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Update rating, reviews and warranty information.
               </p>
+
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
 
               {/* Rating */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Rating
                 </label>
@@ -381,13 +536,17 @@ export default function EditProductPage() {
                   min="0"
                   max="5"
                   value={rating}
-                  onChange={(e) => setRating(e.target.value)}
+                  onChange={(e) =>
+                    setRating(e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
               {/* Reviews */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Reviews
                 </label>
@@ -396,13 +555,17 @@ export default function EditProductPage() {
                   type="number"
                   min="0"
                   value={reviews}
-                  onChange={(e) => setReviews(e.target.value)}
+                  onChange={(e) =>
+                    setReviews(e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
               {/* Warranty */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Warranty
                 </label>
@@ -410,20 +573,27 @@ export default function EditProductPage() {
                 <input
                   type="text"
                   value={warranty}
-                  onChange={(e) => setWarranty(e.target.value)}
+                  onChange={(e) =>
+                    setWarranty(e.target.value)
+                  }
                   placeholder="6 Months"
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
                 />
+
               </div>
 
             </div>
 
           </section>
 
-          {/* Image */}
+          {/* ============================= */}
+          {/* Product Image */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 🖼️ Product Image
               </h2>
@@ -431,12 +601,14 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Update the product image URL and preview it.
               </p>
+
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 items-center">
 
-              {/* URL */}
+              {/* Image URL */}
               <div>
+
                 <label className="block font-semibold mb-2">
                   Product Image URL
                 </label>
@@ -444,7 +616,9 @@ export default function EditProductPage() {
                 <input
                   type="text"
                   value={image}
-                  onChange={(e) => setImage(e.target.value)}
+                  onChange={(e) =>
+                    setImage(e.target.value)
+                  }
                   required
                   placeholder="/products/product.jpg"
                   className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
@@ -453,19 +627,24 @@ export default function EditProductPage() {
                 <p className="text-sm text-gray-500 mt-2">
                   Example: /products/battery.jpg
                 </p>
+
               </div>
 
               {/* Preview */}
               <div className="border rounded-2xl bg-gray-50 min-h-[220px] flex items-center justify-center p-5">
 
                 {image ? (
+
                   <img
                     src={image}
                     alt={name || "Product preview"}
                     className="max-h-52 max-w-full object-contain"
                   />
+
                 ) : (
+
                   <div className="text-center text-gray-400">
+
                     <div className="text-5xl mb-2">
                       🖼️
                     </div>
@@ -473,7 +652,9 @@ export default function EditProductPage() {
                     <p>
                       Image Preview
                     </p>
+
                   </div>
+
                 )}
 
               </div>
@@ -482,10 +663,14 @@ export default function EditProductPage() {
 
           </section>
 
+          {/* ============================= */}
           {/* Description */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 📝 Description
               </h2>
@@ -493,22 +678,29 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Write a clear description for customers.
               </p>
+
             </div>
 
             <textarea
               rows={7}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) =>
+                setDescription(e.target.value)
+              }
               placeholder="Write product description..."
               className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 resize-y"
             />
 
           </section>
 
-          {/* Stock & Options */}
+          {/* ============================= */}
+          {/* Stock & Product Options */}
+          {/* ============================= */}
+
           <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
 
             <div className="border-b pb-5 mb-6">
+
               <h2 className="text-2xl font-bold">
                 📦 Stock & Product Options
               </h2>
@@ -516,21 +708,30 @@ export default function EditProductPage() {
               <p className="text-gray-500 mt-1">
                 Control availability and product visibility.
               </p>
+
             </div>
 
             {/* Stock */}
             <div className="mb-6">
+
               <label className="block font-semibold mb-2">
                 Stock Status
               </label>
 
               <select
-                value={stock ? "In Stock" : "Out of Stock"}
+                value={
+                  stock
+                    ? "In Stock"
+                    : "Out of Stock"
+                }
                 onChange={(e) =>
-                  setStock(e.target.value === "In Stock")
+                  setStock(
+                    e.target.value === "In Stock"
+                  )
                 }
                 className="w-full border border-gray-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
               >
+
                 <option value="In Stock">
                   In Stock
                 </option>
@@ -538,7 +739,9 @@ export default function EditProductPage() {
                 <option value="Out of Stock">
                   Out of Stock
                 </option>
+
               </select>
+
             </div>
 
             {/* Options */}
@@ -546,16 +749,20 @@ export default function EditProductPage() {
 
               {/* Free Delivery */}
               <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition">
+
                 <input
                   type="checkbox"
                   checked={freeDelivery}
                   onChange={(e) =>
-                    setFreeDelivery(e.target.checked)
+                    setFreeDelivery(
+                      e.target.checked
+                    )
                   }
                   className="w-5 h-5 accent-red-600"
                 />
 
                 <div>
+
                   <p className="font-semibold">
                     🚚 Free Delivery
                   </p>
@@ -563,21 +770,27 @@ export default function EditProductPage() {
                   <p className="text-sm text-gray-500">
                     Offer free delivery
                   </p>
+
                 </div>
+
               </label>
 
               {/* Featured */}
               <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition">
+
                 <input
                   type="checkbox"
                   checked={featured}
                   onChange={(e) =>
-                    setFeatured(e.target.checked)
+                    setFeatured(
+                      e.target.checked
+                    )
                   }
                   className="w-5 h-5 accent-red-600"
                 />
 
                 <div>
+
                   <p className="font-semibold">
                     ⭐ Featured Product
                   </p>
@@ -585,21 +798,27 @@ export default function EditProductPage() {
                   <p className="text-sm text-gray-500">
                     Show as featured
                   </p>
+
                 </div>
+
               </label>
 
               {/* Sale */}
               <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition">
+
                 <input
                   type="checkbox"
                   checked={sale}
                   onChange={(e) =>
-                    setSale(e.target.checked)
+                    setSale(
+                      e.target.checked
+                    )
                   }
                   className="w-5 h-5 accent-red-600"
                 />
 
                 <div>
+
                   <p className="font-semibold">
                     🔥 Sale Product
                   </p>
@@ -607,14 +826,127 @@ export default function EditProductPage() {
                   <p className="text-sm text-gray-500">
                     Show as sale item
                   </p>
+
                 </div>
+
               </label>
 
             </div>
 
           </section>
 
+          {/* ============================= */}
+          {/* Product Labels */}
+          {/* ============================= */}
+
+          <section className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
+
+            <div className="border-b pb-5 mb-6">
+
+              <h2 className="text-2xl font-bold">
+                🏷️ Product Labels
+              </h2>
+
+              <p className="text-gray-500 mt-1">
+                Choose badges that should appear on this product.
+              </p>
+
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+
+              {/* Hot Sale */}
+              <label className="flex items-center gap-3 border border-red-200 bg-red-50 rounded-xl p-4 cursor-pointer hover:bg-red-100 transition">
+
+                <input
+                  type="checkbox"
+                  checked={hotSale}
+                  onChange={(e) =>
+                    setHotSale(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <div>
+
+                  <p className="font-bold text-red-600">
+                    🔥 Hot Sale
+                  </p>
+
+                  <p className="text-sm text-gray-500">
+                    Special sale product
+                  </p>
+
+                </div>
+
+              </label>
+
+              {/* Best Seller */}
+              <label className="flex items-center gap-3 border border-yellow-200 bg-yellow-50 rounded-xl p-4 cursor-pointer hover:bg-yellow-100 transition">
+
+                <input
+                  type="checkbox"
+                  checked={bestSeller}
+                  onChange={(e) =>
+                    setBestSeller(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <div>
+
+                  <p className="font-bold text-yellow-700">
+                    🏆 Best Seller
+                  </p>
+
+                  <p className="text-sm text-gray-500">
+                    Popular customer choice
+                  </p>
+
+                </div>
+
+              </label>
+
+              {/* Premium Product */}
+              <label className="flex items-center gap-3 border border-purple-200 bg-purple-50 rounded-xl p-4 cursor-pointer hover:bg-purple-100 transition">
+
+                <input
+                  type="checkbox"
+                  checked={premiumProduct}
+                  onChange={(e) =>
+                    setPremiumProduct(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <div>
+
+                  <p className="font-bold text-purple-700">
+                    👑 Premium Product
+                  </p>
+
+                  <p className="text-sm text-gray-500">
+                    Premium quality product
+                  </p>
+
+                </div>
+
+              </label>
+
+            </div>
+
+          </section>
+
+          {/* ============================= */}
           {/* Bottom Actions */}
+          {/* ============================= */}
+
           <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col-reverse md:flex-row md:justify-between gap-4">
 
             <Link

@@ -1,41 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useSearch } from "../context/SearchContext";
+
 type Product = {
   id: number;
   name: string;
   price: number;
-  oldPrice?: number;
-  discount?: number;
-  rating?: number;
-  reviews?: number;
+  oldPrice?: number | null;
+  discount?: number | null;
+  rating?: number | null;
+  reviews?: number | null;
   stock?: boolean;
   freeDelivery?: boolean;
-  warranty?: string;
+  warranty?: string | null;
   image: string;
   category: string;
-  description?: string;
+  description?: string | null;
   slug?: string;
+
+  featured?: boolean;
+  sale?: boolean;
+  hotSale?: boolean;
+  bestSeller?: boolean;
+  premiumProduct?: boolean;
 };
+
+type SortOption =
+  | "default"
+  | "price-low"
+  | "price-high"
+  | "rating-high"
+  | "name-az"
+  | "name-za";
 
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   const { search, setSearch } = useSearch();
+  const { addToCart } = useCart();
+  const { addToWishlist } = useWishlist();
+
   const [category, setCategory] = useState("All");
   const [maxPrice, setMaxPrice] = useState(50000);
 
-  const { addToCart } = useCart();
-  const { addToWishlist } = useWishlist();
+  const [minRating, setMinRating] = useState(0);
+  const [sortBy, setSortBy] =
+    useState<SortOption>("default");
+
+  const [saleOnly, setSaleOnly] = useState(false);
+  const [freeDeliveryOnly, setFreeDeliveryOnly] =
+    useState(false);
+  const [bestSellerOnly, setBestSellerOnly] =
+    useState(false);
+  const [hotSaleOnly, setHotSaleOnly] =
+    useState(false);
+  const [premiumOnly, setPremiumOnly] =
+    useState(false);
 
   useEffect(() => {
     async function loadProducts() {
       try {
+        setLoading(true);
+
         const res = await fetch("/api/products", {
           cache: "no-store",
         });
@@ -49,6 +81,7 @@ export default function ShopPage() {
         setProducts(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error(error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -57,42 +90,162 @@ export default function ShopPage() {
     loadProducts();
   }, []);
 
-  const categories = [
-    "All",
-    ...Array.from(
-      new Set(products.map((product) => product.category))
-    ),
-  ];
+  const categories = useMemo(() => {
+    return [
+      "All",
+      ...Array.from(
+        new Set(
+          products
+            .map((product) => product.category)
+            .filter(Boolean)
+        )
+      ),
+    ];
+  }, [products]);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter((product) => {
+      const productName = product.name.toLowerCase();
+      const searchText = search.toLowerCase();
 
-    const matchesCategory =
-      category === "All" ||
-      product.category === category;
+      const matchesSearch =
+        productName.includes(searchText);
 
-    const matchesPrice = product.price <= maxPrice;
+      const matchesCategory =
+        category === "All" ||
+        product.category === category;
 
-    return (
-      matchesSearch &&
-      matchesCategory &&
-      matchesPrice
-    );
-  });
+      const matchesPrice =
+        Number(product.price) <= maxPrice;
+
+      const matchesRating =
+        Number(product.rating ?? 0) >= minRating;
+
+      const matchesSale =
+        !saleOnly || product.sale === true;
+
+      const matchesFreeDelivery =
+        !freeDeliveryOnly ||
+        product.freeDelivery === true;
+
+      const matchesBestSeller =
+        !bestSellerOnly ||
+        product.bestSeller === true;
+
+      const matchesHotSale =
+        !hotSaleOnly ||
+        product.hotSale === true;
+
+      const matchesPremium =
+        !premiumOnly ||
+        product.premiumProduct === true;
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesPrice &&
+        matchesRating &&
+        matchesSale &&
+        matchesFreeDelivery &&
+        matchesBestSeller &&
+        matchesHotSale &&
+        matchesPremium
+      );
+    });
+
+    const sorted = [...filtered];
+
+    switch (sortBy) {
+      case "price-low":
+        sorted.sort(
+          (a, b) =>
+            Number(a.price) - Number(b.price)
+        );
+        break;
+
+      case "price-high":
+        sorted.sort(
+          (a, b) =>
+            Number(b.price) - Number(a.price)
+        );
+        break;
+
+      case "rating-high":
+        sorted.sort(
+          (a, b) =>
+            Number(b.rating ?? 0) -
+            Number(a.rating ?? 0)
+        );
+        break;
+
+      case "name-az":
+        sorted.sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+        break;
+
+      case "name-za":
+        sorted.sort((a, b) =>
+          b.name.localeCompare(a.name)
+        );
+        break;
+
+      default:
+        break;
+    }
+
+    return sorted;
+  }, [
+    products,
+    search,
+    category,
+    maxPrice,
+    minRating,
+    sortBy,
+    saleOnly,
+    freeDeliveryOnly,
+    bestSellerOnly,
+    hotSaleOnly,
+    premiumOnly,
+  ]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setCategory("All");
+    setMaxPrice(50000);
+    setMinRating(0);
+    setSortBy("default");
+
+    setSaleOnly(false);
+    setFreeDeliveryOnly(false);
+    setBestSellerOnly(false);
+    setHotSaleOnly(false);
+    setPremiumOnly(false);
+  };
+
+  const activeFilterCount = [
+    category !== "All",
+    maxPrice !== 50000,
+    minRating > 0,
+    sortBy !== "default",
+    saleOnly,
+    freeDeliveryOnly,
+    bestSellerOnly,
+    hotSaleOnly,
+    premiumOnly,
+  ].filter(Boolean).length;
 
   return (
     <main className="min-h-screen bg-gray-100">
 
-      {/* Header */}
+      {/* Page Header */}
       <section className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 py-10">
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
             <div>
-              <h1 className="text-4xl font-bold text-red-600">
+              <h1 className="text-4xl md:text-5xl font-bold text-red-600">
                 🛍️ Shop
               </h1>
 
@@ -113,12 +266,34 @@ export default function ShopPage() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 py-10">
 
-        {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-10">
+        {/* Filter Box */}
+        <section className="bg-white rounded-2xl shadow-lg p-5 md:p-7 mb-10">
 
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+
+            <div>
+              <h2 className="text-2xl font-bold">
+                🔎 Product Filters
+              </h2>
+
+              <p className="text-sm text-gray-500 mt-1">
+                Find exactly what you need
+              </p>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <span className="inline-flex w-fit bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
+                {activeFilterCount} filter
+                {activeFilterCount > 1 ? "s" : ""} active
+              </span>
+            )}
+
+          </div>
+
+          {/* Main Filters */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
 
             {/* Search */}
             <div>
@@ -148,17 +323,20 @@ export default function ShopPage() {
                 onChange={(e) =>
                   setCategory(e.target.value)
                 }
-                className="w-full border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 bg-white"
               >
                 {categories.map((item) => (
-                  <option key={item} value={item}>
+                  <option
+                    key={item}
+                    value={item}
+                  >
                     {item}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Price */}
+            {/* Maximum Price */}
             <div>
               <label className="block font-semibold mb-2">
                 💰 Maximum Price
@@ -177,38 +355,228 @@ export default function ShopPage() {
               />
             </div>
 
+            {/* Rating */}
+            <div>
+              <label className="block font-semibold mb-2">
+                ⭐ Minimum Rating
+              </label>
+
+              <select
+                value={minRating}
+                onChange={(e) =>
+                  setMinRating(
+                    Number(e.target.value)
+                  )
+                }
+                className="w-full border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 bg-white"
+              >
+                <option value={0}>
+                  All Ratings
+                </option>
+                <option value={4}>
+                  ⭐ 4+ Rating
+                </option>
+                <option value={4.5}>
+                  ⭐ 4.5+ Rating
+                </option>
+                <option value={5}>
+                  ⭐ 5 Rating
+                </option>
+              </select>
+            </div>
+
           </div>
 
-          {/* Filter Info */}
-          <div className="mt-5 flex flex-col sm:flex-row sm:justify-between gap-3">
+          {/* Sort */}
+          <div className="mt-5">
+
+            <label className="block font-semibold mb-2">
+              ↕️ Sort Products
+            </label>
+
+            <select
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(
+                  e.target.value as SortOption
+                )
+              }
+              className="w-full md:w-80 border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500 bg-white"
+            >
+              <option value="default">
+                Default
+              </option>
+
+              <option value="price-low">
+                Price: Low to High
+              </option>
+
+              <option value="price-high">
+                Price: High to Low
+              </option>
+
+              <option value="rating-high">
+                Highest Rated
+              </option>
+
+              <option value="name-az">
+                Name: A to Z
+              </option>
+
+              <option value="name-za">
+                Name: Z to A
+              </option>
+            </select>
+
+          </div>
+
+          {/* Advanced Filters */}
+          <div className="mt-7 border-t pt-6">
+
+            <h3 className="font-bold text-lg mb-4">
+              🏷️ Advanced Filters
+            </h3>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+
+              {/* Sale */}
+              <label className="flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer hover:bg-red-50 transition">
+
+                <input
+                  type="checkbox"
+                  checked={saleOnly}
+                  onChange={(e) =>
+                    setSaleOnly(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <span className="font-semibold">
+                  🔥 Sale Only
+                </span>
+
+              </label>
+
+              {/* Free Delivery */}
+              <label className="flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer hover:bg-green-50 transition">
+
+                <input
+                  type="checkbox"
+                  checked={freeDeliveryOnly}
+                  onChange={(e) =>
+                    setFreeDeliveryOnly(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <span className="font-semibold">
+                  🚚 Free Delivery
+                </span>
+
+              </label>
+
+              {/* Best Seller */}
+              <label className="flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer hover:bg-yellow-50 transition">
+
+                <input
+                  type="checkbox"
+                  checked={bestSellerOnly}
+                  onChange={(e) =>
+                    setBestSellerOnly(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <span className="font-semibold">
+                  🏆 Best Seller
+                </span>
+
+              </label>
+
+              {/* Hot Sale */}
+              <label className="flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer hover:bg-orange-50 transition">
+
+                <input
+                  type="checkbox"
+                  checked={hotSaleOnly}
+                  onChange={(e) =>
+                    setHotSaleOnly(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <span className="font-semibold">
+                  🔥 Hot Sale
+                </span>
+
+              </label>
+
+              {/* Premium */}
+              <label className="flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer hover:bg-purple-50 transition">
+
+                <input
+                  type="checkbox"
+                  checked={premiumOnly}
+                  onChange={(e) =>
+                    setPremiumOnly(
+                      e.target.checked
+                    )
+                  }
+                  className="w-5 h-5 accent-red-600"
+                />
+
+                <span className="font-semibold">
+                  💎 Premium
+                </span>
+
+              </label>
+
+            </div>
+
+          </div>
+
+          {/* Filter Bottom */}
+          <div className="mt-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t pt-5">
 
             <p className="text-gray-500">
               Showing{" "}
               <span className="font-bold text-black">
                 {filteredProducts.length}
               </span>{" "}
+              of{" "}
+              <span className="font-bold text-black">
+                {products.length}
+              </span>{" "}
               products
             </p>
 
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setCategory("All");
-                setMaxPrice(50000);
-              }}
-              className="text-red-600 font-semibold hover:underline text-left sm:text-right"
+              onClick={resetFilters}
+              className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold transition"
             >
-              Reset Filters
+              🔄 Reset All Filters
             </button>
 
           </div>
 
-        </div>
+        </section>
 
         {/* Loading */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+
+            <div className="text-5xl mb-5">
+              ⏳
+            </div>
 
             <p className="text-xl font-semibold">
               Loading Products...
@@ -216,6 +584,7 @@ export default function ShopPage() {
 
           </div>
         ) : filteredProducts.length === 0 ? (
+
           /* No Products */
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
 
@@ -227,44 +596,105 @@ export default function ShopPage() {
               No Products Found
             </h2>
 
-            <p className="text-gray-500">
+            <p className="text-gray-500 mb-6">
               Try changing your search or filters.
             </p>
 
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold"
+            >
+              🔄 Clear Filters
+            </button>
+
           </div>
+
         ) : (
+
           /* Products */
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
             {filteredProducts.map((product) => (
+
               <div
                 key={product.id}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition"
+                className="group relative bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
               >
+
+                {/* Badges */}
+                <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
+
+                  {product.sale && (
+                    <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      SALE
+                    </span>
+                  )}
+
+                  {product.hotSale && (
+                    <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      🔥 HOT
+                    </span>
+                  )}
+
+                  {product.bestSeller && (
+                    <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      🏆 BEST SELLER
+                    </span>
+                  )}
+
+                  {product.premiumProduct && (
+                    <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      💎 PREMIUM
+                    </span>
+                  )}
+
+                </div>
+
+                {/* Wishlist */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    addToWishlist({
+                      slug: String(product.id),
+                      name: product.name,
+                      price: Number(product.price),
+                      image: product.image,
+                    })
+                  }
+                  className="absolute right-3 top-3 z-20 rounded-full bg-white p-2.5 shadow-lg hover:bg-red-600 hover:text-white transition"
+                  aria-label="Add to wishlist"
+                >
+                  ❤️
+                </button>
 
                 {/* Image */}
                 <Link
                   href={`/product/${product.id}`}
                   className="block bg-gray-50 p-5"
                 >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-56 object-contain hover:scale-105 transition"
-                  />
+                  <div className="relative h-56 overflow-hidden">
+
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-contain group-hover:scale-105 transition duration-300"
+                    />
+
+                  </div>
                 </Link>
 
                 {/* Product Info */}
                 <div className="p-5">
 
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm font-semibold text-red-600">
                     {product.category}
                   </p>
 
                   <Link
                     href={`/product/${product.id}`}
                   >
-                    <h2 className="text-xl font-bold mt-1 hover:text-red-600">
+                    <h2 className="text-xl font-bold mt-1 line-clamp-2 hover:text-red-600 transition">
                       {product.name}
                     </h2>
                   </Link>
@@ -273,12 +703,28 @@ export default function ShopPage() {
                   <div className="flex items-center gap-2 mt-3">
 
                     <span className="text-yellow-500">
-                      ⭐⭐⭐⭐⭐
+                      {"⭐".repeat(
+                        Math.min(
+                          5,
+                          Math.max(
+                            0,
+                            Math.round(
+                              Number(
+                                product.rating ?? 0
+                              )
+                            )
+                          )
+                        )
+                      )}
                     </span>
 
                     <span className="text-sm text-gray-500">
-                      {product.rating ?? 5} (
-                      {product.reviews ?? 0})
+                      {Number(
+                        product.rating ?? 0
+                      ).toFixed(1)}{" "}
+                      (
+                      {product.reviews ?? 0}
+                      )
                     </span>
 
                   </div>
@@ -293,34 +739,52 @@ export default function ShopPage() {
                       ).toLocaleString()}
                     </span>
 
-                    {product.oldPrice && (
-                      <span className="text-gray-400 line-through">
-                        ৳{" "}
-                        {Number(
-                          product.oldPrice
-                        ).toLocaleString()}
-                      </span>
-                    )}
+                    {product.oldPrice &&
+                      Number(product.oldPrice) >
+                        Number(product.price) && (
+                        <span className="text-gray-400 line-through">
+                          ৳{" "}
+                          {Number(
+                            product.oldPrice
+                          ).toLocaleString()}
+                        </span>
+                      )}
 
-                    {product.discount && (
-                      <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold">
-                        -{product.discount}%
-                      </span>
-                    )}
+                    {product.discount &&
+                      Number(product.discount) > 0 && (
+                        <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold">
+                          -{product.discount}%
+                        </span>
+                      )}
 
                   </div>
 
-                  {/* Stock */}
-                  <div className="mt-3">
+                  {/* Extra Info */}
+                  <div className="mt-3 space-y-1 text-sm">
 
                     {product.stock === false ? (
-                      <span className="text-red-600 font-semibold text-sm">
+                      <p className="text-red-600 font-semibold">
                         ❌ Out of Stock
-                      </span>
+                      </p>
                     ) : (
-                      <span className="text-green-600 font-semibold text-sm">
+                      <p className="text-green-600 font-semibold">
                         ✅ In Stock
-                      </span>
+                      </p>
+                    )}
+
+                    {product.freeDelivery && (
+                      <p className="text-green-600 font-semibold">
+                        🚚 Free Delivery
+                      </p>
+                    )}
+
+                    {product.warranty && (
+                      <p className="text-gray-500">
+                        🛡️ Warranty:{" "}
+                        <span className="font-semibold text-gray-700">
+                          {product.warranty}
+                        </span>
+                      </p>
                     )}
 
                   </div>
@@ -330,16 +794,20 @@ export default function ShopPage() {
 
                     <button
                       type="button"
-                      disabled={product.stock === false}
+                      disabled={
+                        product.stock === false
+                      }
                       onClick={() =>
                         addToCart({
                           name: product.name,
-                          price: product.price,
+                          price: Number(
+                            product.price
+                          ),
                           image: product.image,
                           quantity: 1,
                         })
                       }
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-3 rounded-xl font-bold"
+                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition"
                     >
                       🛒 Add To Cart
                     </button>
@@ -350,20 +818,24 @@ export default function ShopPage() {
                         type="button"
                         onClick={() =>
                           addToWishlist({
-  slug: String(product.id),
-  name: product.name,
-  price: Number(product.price),
-  image: product.image,
-})
+                            slug: String(
+                              product.id
+                            ),
+                            name: product.name,
+                            price: Number(
+                              product.price
+                            ),
+                            image: product.image,
+                          })
                         }
-                        className="bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-semibold"
+                        className="bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-semibold transition"
                       >
                         ❤️ Wishlist
                       </button>
 
                       <Link
                         href={`/product/${product.id}`}
-                        className="bg-black hover:bg-gray-800 text-white py-3 rounded-xl font-semibold text-center"
+                        className="bg-black hover:bg-gray-800 text-white py-3 rounded-xl font-semibold text-center transition"
                       >
                         👁️ Details
                       </Link>
@@ -375,9 +847,11 @@ export default function ShopPage() {
                 </div>
 
               </div>
+
             ))}
 
           </div>
+
         )}
 
       </div>

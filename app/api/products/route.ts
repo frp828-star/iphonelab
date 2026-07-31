@@ -1,34 +1,26 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const filePath = path.join(
-  process.cwd(),
-  "data",
-  "products.json"
-);
-
-function getProducts() {
-  const file = fs.readFileSync(filePath, "utf-8");
-  return JSON.parse(file);
-}
-
-function saveProducts(products: any[]) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(products, null, 2),
-    "utf-8"
-  );
-}
+import { supabase } from "@/lib/supabase";
 
 // GET - সব Product
 export async function GET() {
   try {
-    const products = getProducts();
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("id", { ascending: true });
 
-    return NextResponse.json(products);
+    if (error) {
+      console.error("GET products error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data ?? []);
   } catch (error) {
-    console.error(error);
+    console.error("GET products error:", error);
 
     return NextResponse.json(
       { error: "Failed to load products" },
@@ -40,26 +32,128 @@ export async function GET() {
 // POST - নতুন Product Add
 export async function POST(request: Request) {
   try {
-    const products = getProducts();
     const body = await request.json();
 
-    const newProduct = {
-      id:
-        products.length > 0
-          ? Math.max(...products.map((p: any) => p.id)) + 1
-          : 1,
-      ...body,
+    const {
+      name,
+      category,
+      price,
+      oldPrice,
+      discount,
+      rating,
+      reviews,
+      stock,
+      freeDelivery,
+      warranty,
+      image,
+      featured,
+      sale,
+      hotSale,
+      bestSeller,
+      premiumProduct,
+      description,
+    } = body;
+
+    if (
+      !name ||
+      !category ||
+      price === undefined ||
+      price === "" ||
+      !image
+    ) {
+      return NextResponse.json(
+        {
+          error: "Name, category, price and image are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    // সর্বশেষ ID বের করা
+    const { data: lastProduct, error: lastProductError } =
+      await supabase
+        .from("products")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (lastProductError) {
+      console.error(
+        "Last product error:",
+        lastProductError
+      );
+
+      return NextResponse.json(
+        { error: lastProductError.message },
+        { status: 500 }
+      );
+    }
+
+    const newId = lastProduct
+      ? Number(lastProduct.id) + 1
+      : 1;
+
+    const productData = {
+      id: newId,
+      name: name.trim(),
+      category,
+      price: Number(price),
+
+      oldPrice:
+        oldPrice !== undefined && oldPrice !== ""
+          ? Number(oldPrice)
+          : null,
+
+      discount:
+        discount !== undefined && discount !== ""
+          ? Number(discount)
+          : null,
+
+      rating:
+        rating !== undefined && rating !== ""
+          ? Number(rating)
+          : 5,
+
+      reviews:
+        reviews !== undefined && reviews !== ""
+          ? Number(reviews)
+          : 0,
+
+      stock: stock ?? true,
+      freeDelivery: freeDelivery ?? false,
+      warranty: warranty?.trim() || null,
+      image: image.trim(),
+
+      featured: featured ?? true,
+      sale: sale ?? false,
+      hotSale: hotSale ?? false,
+      bestSeller: bestSeller ?? false,
+      premiumProduct: premiumProduct ?? false,
+
+      description: description?.trim() || null,
     };
 
-    products.push(newProduct);
+    const { data, error } = await supabase
+      .from("products")
+      .insert(productData)
+      .select("*")
+      .maybeSingle();
 
-    saveProducts(products);
+    if (error) {
+      console.error("POST products error:", error);
 
-    return NextResponse.json(newProduct, {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data, {
       status: 201,
     });
   } catch (error) {
-    console.error(error);
+    console.error("POST products error:", error);
 
     return NextResponse.json(
       { error: "Failed to add product" },
@@ -71,36 +165,162 @@ export async function POST(request: Request) {
 // PUT - Product Edit
 export async function PUT(request: Request) {
   try {
-    const products = getProducts();
     const body = await request.json();
 
-    const id = Number(body.id);
+    const productId = Number(body.id);
 
-    const index = products.findIndex(
-      (product: any) => product.id === id
+    if (!productId || Number.isNaN(productId)) {
+      return NextResponse.json(
+        { error: "Valid Product ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // শুধুমাত্র database-এর প্রয়োজনীয় fields update করব
+    const updates = {
+      name:
+        body.name !== undefined
+          ? String(body.name).trim()
+          : undefined,
+
+      category:
+        body.category !== undefined
+          ? String(body.category)
+          : undefined,
+
+      price:
+        body.price !== undefined && body.price !== ""
+          ? Number(body.price)
+          : undefined,
+
+      oldPrice:
+        body.oldPrice !== undefined &&
+        body.oldPrice !== ""
+          ? Number(body.oldPrice)
+          : null,
+
+      discount:
+        body.discount !== undefined &&
+        body.discount !== ""
+          ? Number(body.discount)
+          : null,
+
+      rating:
+        body.rating !== undefined &&
+        body.rating !== ""
+          ? Number(body.rating)
+          : 5,
+
+      reviews:
+        body.reviews !== undefined &&
+        body.reviews !== ""
+          ? Number(body.reviews)
+          : 0,
+
+      stock:
+        body.stock !== undefined
+          ? Boolean(body.stock)
+          : true,
+
+      freeDelivery:
+        body.freeDelivery !== undefined
+          ? Boolean(body.freeDelivery)
+          : false,
+
+      warranty:
+        body.warranty !== undefined
+          ? String(body.warranty).trim() || null
+          : null,
+
+      image:
+        body.image !== undefined
+          ? String(body.image).trim()
+          : undefined,
+
+      featured:
+        body.featured !== undefined
+          ? Boolean(body.featured)
+          : true,
+
+      sale:
+        body.sale !== undefined
+          ? Boolean(body.sale)
+          : false,
+
+      hotSale:
+        body.hotSale !== undefined
+          ? Boolean(body.hotSale)
+          : false,
+
+      bestSeller:
+        body.bestSeller !== undefined
+          ? Boolean(body.bestSeller)
+          : false,
+
+      premiumProduct:
+        body.premiumProduct !== undefined
+          ? Boolean(body.premiumProduct)
+          : false,
+
+      description:
+        body.description !== undefined
+          ? String(body.description).trim() || null
+          : null,
+    };
+
+    // undefined field বাদ দেওয়া
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(updates).filter(
+        ([, value]) => value !== undefined
+      )
     );
 
-    if (index === -1) {
+    console.log("Updating product:", productId);
+    console.log("Update data:", cleanUpdates);
+
+    const { data, error } = await supabase
+      .from("products")
+      .update(cleanUpdates)
+      .eq("id", productId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      console.error("PUT products error:", error);
+
       return NextResponse.json(
-        { error: "Product not found" },
+        {
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        {
+          error:
+            "Product was not updated. Product may not exist or database permission may be blocking the update.",
+        },
         { status: 404 }
       );
     }
 
-    products[index] = {
-      ...products[index],
-      ...body,
-      id,
-    };
-
-    saveProducts(products);
-
-    return NextResponse.json(products[index]);
+    return NextResponse.json(data, {
+      status: 200,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("PUT products error:", error);
 
     return NextResponse.json(
-      { error: "Failed to update product" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update product",
+      },
       { status: 500 }
     );
   }
@@ -109,31 +329,47 @@ export async function PUT(request: Request) {
 // DELETE - Product Delete
 export async function DELETE(request: Request) {
   try {
-    const products = getProducts();
+    const body = await request.json();
 
-    const { id } = await request.json();
+    const productId = Number(body.id);
 
-    const productId = Number(id);
+    if (!productId || Number.isNaN(productId)) {
+      return NextResponse.json(
+        { error: "Valid Product ID is required" },
+        { status: 400 }
+      );
+    }
 
-    const filteredProducts = products.filter(
-      (product: any) => product.id !== productId
-    );
+    const { data, error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId)
+      .select("*")
+      .maybeSingle();
 
-    if (filteredProducts.length === products.length) {
+    if (error) {
+      console.error("DELETE products error:", error);
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
       return NextResponse.json(
         { error: "Product not found" },
         { status: 404 }
       );
     }
 
-    saveProducts(filteredProducts);
-
     return NextResponse.json({
       success: true,
       message: "Product deleted successfully",
+      product: data,
     });
   } catch (error) {
-    console.error(error);
+    console.error("DELETE products error:", error);
 
     return NextResponse.json(
       { error: "Failed to delete product" },
