@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,18 +12,21 @@ type Product = {
   id: number;
   name: string;
   price: number;
-  oldPrice?: number;
-  discount?: number;
+  oldPrice?: number | null;
+  discount?: number | null;
   rating?: number;
   reviews?: number;
   stock?: boolean;
   freeDelivery?: boolean;
-  warranty?: string;
+  warranty?: string | null;
   image: string;
   category: string;
-  description?: string;
+  description?: string | null;
   featured?: boolean;
   sale?: boolean;
+  hotSale?: boolean;
+  bestSeller?: boolean;
+  premiumProduct?: boolean;
 };
 
 export default function FeaturedProducts() {
@@ -39,13 +41,20 @@ export default function FeaturedProducts() {
 
   useEffect(() => {
     fetch("/api/products")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load products");
+        }
+
+        return res.json();
+      })
       .then((data) => {
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Products loading error:", err);
+        setProducts([]);
         setLoading(false);
       });
   }, []);
@@ -69,6 +78,7 @@ export default function FeaturedProducts() {
   return (
     <section className="py-16 bg-gray-100">
       <div className="max-w-7xl mx-auto px-5">
+        {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold">
             🔥 Featured Products
@@ -79,6 +89,7 @@ export default function FeaturedProducts() {
           </p>
         </div>
 
+        {/* No Products */}
         {featuredProducts.length === 0 ? (
           <div className="text-center py-20">
             <h3 className="text-2xl font-bold text-gray-600">
@@ -92,13 +103,16 @@ export default function FeaturedProducts() {
                 key={product.id}
                 className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
               >
+                {/* Sale Badge */}
                 {product.sale && (
                   <span className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
                     SALE
                   </span>
                 )}
 
+                {/* Wishlist */}
                 <button
+                  type="button"
                   onClick={() =>
                     addToWishlist({
                       slug: String(product.id),
@@ -112,46 +126,82 @@ export default function FeaturedProducts() {
                   ❤️
                 </button>
 
+                {/* Product Image */}
                 <Link href={`/product/${product.id}`}>
-                  <div className="relative h-60 bg-white">
-                    <Image
+                  <div className="relative h-60 bg-white flex items-center justify-center overflow-hidden">
+                    <img
                       src={product.image}
                       alt={product.name}
-                      fill
-                      className="object-contain p-5 transition duration-300 group-hover:scale-110"
+                      className="h-full w-full object-contain p-5 transition duration-300 group-hover:scale-110"
                     />
                   </div>
                 </Link>
 
+                {/* Product Info */}
                 <div className="p-5">
+                  {/* Category */}
                   <p className="text-sm font-medium text-red-600">
                     {product.category}
                   </p>
 
+                  {/* Name */}
                   <h3 className="mt-2 text-lg font-bold text-gray-900 line-clamp-2">
                     {product.name}
                   </h3>
 
+                  {/* Rating */}
+                  {product.rating !== undefined && (
+                    <div className="mt-2 flex items-center gap-2 text-sm">
+                      <span className="text-yellow-500">
+                        ⭐ {product.rating}
+                      </span>
+
+                      {product.reviews !== undefined && (
+                        <span className="text-gray-400">
+                          ({product.reviews} reviews)
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Price */}
                   <div className="mt-4 flex items-center gap-3 flex-wrap">
-  <span className="text-2xl font-bold text-red-600">
-    ৳ {product.price.toLocaleString()}
-  </span>
+                    <span className="text-2xl font-bold text-red-600">
+                      ৳ {product.price.toLocaleString()}
+                    </span>
 
-  {product.oldPrice && (
-    <span className="text-gray-400 line-through">
-      ৳ {product.oldPrice.toLocaleString()}
-    </span>
-  )}
+                    {product.oldPrice && (
+                      <span className="text-gray-400 line-through">
+                        ৳ {product.oldPrice.toLocaleString()}
+                      </span>
+                    )}
 
-  {product.discount && (
-    <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-      -{product.discount}%
-    </span>
-  )}
-</div>
+                    {product.discount && product.discount > 0 && (
+                      <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        -{product.discount}%
+                      </span>
+                    )}
+                  </div>
 
+                  {/* Warranty */}
+                  {product.warranty && (
+                    <p className="mt-3 text-sm text-gray-500">
+                      🛡️ Warranty: {product.warranty}
+                    </p>
+                  )}
+
+                  {/* Delivery */}
+                  {product.freeDelivery && (
+                    <p className="mt-1 text-sm text-green-600 font-medium">
+                      🚚 Free Delivery
+                    </p>
+                  )}
+
+                  {/* Buttons */}
                   <div className="mt-6 space-y-3">
+                    {/* Add to Cart */}
                     <button
+                      type="button"
                       onClick={() =>
                         addToCart({
                           name: product.name,
@@ -164,7 +214,9 @@ export default function FeaturedProducts() {
                       🛒 Add to Cart
                     </button>
 
+                    {/* Buy Now */}
                     <button
+                      type="button"
                       onClick={() => {
                         addToCart({
                           name: product.name,
@@ -179,6 +231,7 @@ export default function FeaturedProducts() {
                       ⚡ Buy Now
                     </button>
 
+                    {/* View Details */}
                     <Link
                       href={`/product/${product.id}`}
                       className="block w-full rounded-xl border-2 border-black py-3 text-center font-semibold transition hover:bg-black hover:text-white"
