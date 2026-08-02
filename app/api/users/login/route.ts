@@ -1,30 +1,8 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const filePath = path.join(
-  process.cwd(),
-  "data",
-  "users.json"
-);
-
-function getUsers() {
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-
-  const file = fs.readFileSync(filePath, "utf-8");
-
-  if (!file.trim()) {
-    return [];
-  }
-
-  return JSON.parse(file);
-}
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
-    const users = getUsers();
     const body = await request.json();
 
     const email = String(body.email || "")
@@ -44,12 +22,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = users.find(
-      (item: any) =>
-        String(item.email).toLowerCase() === email &&
-        String(item.password) === password
-    );
+    // Find user from Supabase
+    const { data: user, error } = await supabaseAdmin
+      .from("users")
+      .select(
+        "id, name, email, phone, password, created_at"
+      )
+      .eq("email", email)
+      .maybeSingle();
 
+    if (error) {
+      console.error("Login user query error:", error);
+
+      return NextResponse.json(
+        {
+          error: "Login failed",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    // User not found
     if (!user) {
       return NextResponse.json(
         {
@@ -61,19 +56,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // Password check
+    if (String(user.password) !== password) {
+      return NextResponse.json(
+        {
+          error: "Invalid email or password",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // Login successful
     return NextResponse.json({
       success: true,
 
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        createdAt: user.createdAt,
+        id: Number(user.id),
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        createdAt: user.created_at,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
 
     return NextResponse.json(
       {
