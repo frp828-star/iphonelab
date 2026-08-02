@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // GET - সব Users
@@ -28,7 +29,7 @@ export async function GET() {
 
     return NextResponse.json(users);
   } catch (error) {
-    console.error(error);
+    console.error("GET users error:", error);
 
     return NextResponse.json(
       { error: "Failed to load users" },
@@ -43,10 +44,13 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const name = String(body.name || "").trim();
+
     const email = String(body.email || "")
       .trim()
       .toLowerCase();
+
     const phone = String(body.phone || "").trim();
+
     const password = String(body.password || "");
 
     if (!name || !email || !phone || !password) {
@@ -56,13 +60,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // Basic password length validation
+    if (password.length < 8) {
+      return NextResponse.json(
+        {
+          error: "Password must be at least 8 characters",
+        },
+        { status: 400 }
+      );
+    }
+
     // Duplicate email check
-    const { data: existingUser, error: checkError } =
-      await supabaseAdmin
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
+    const {
+      data: existingUser,
+      error: checkError,
+    } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
 
     if (checkError) {
       console.error(
@@ -83,6 +99,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // 🔐 Hash password before saving
+    const hashedPassword = await bcrypt.hash(
+      password,
+      12
+    );
+
     const { data, error } = await supabaseAdmin
       .from("users")
       .insert([
@@ -90,10 +112,14 @@ export async function POST(request: Request) {
           name,
           email,
           phone,
-          password,
+
+          // Never save plain password
+          password: hashedPassword,
         },
       ])
-      .select("id, name, email, phone, created_at")
+      .select(
+        "id, name, email, phone, created_at"
+      )
       .single();
 
     if (error) {
@@ -116,7 +142,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error(error);
+    console.error("POST users error:", error);
 
     return NextResponse.json(
       { error: "Failed to create user" },
@@ -166,7 +192,7 @@ export async function DELETE(request: Request) {
       message: "User deleted successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("DELETE users error:", error);
 
     return NextResponse.json(
       { error: "Failed to delete user" },

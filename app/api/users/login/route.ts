@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
@@ -56,8 +57,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Password check
-    if (String(user.password) !== password) {
+    // 🔐 Compare entered password with bcrypt hash
+    const passwordMatch = await bcrypt.compare(
+      password,
+      String(user.password)
+    );
+
+    if (!passwordMatch) {
       return NextResponse.json(
         {
           error: "Invalid email or password",
