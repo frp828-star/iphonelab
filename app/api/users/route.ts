@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isAdminAuthenticated } from "@/lib/adminAuth";
 
 // GET - সব Users
+// 🔐 Admin only
 export async function GET() {
   try {
+    const isAdmin = await isAdminAuthenticated();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("id, name, email, phone, created_at")
@@ -39,6 +50,7 @@ export async function GET() {
 }
 
 // POST - নতুন User তৈরি
+// 🌐 Public - Customer Signup-এর জন্য দরকার
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -60,11 +72,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Basic password length validation
     if (password.length < 8) {
       return NextResponse.json(
         {
-          error: "Password must be at least 8 characters",
+          error:
+            "Password must be at least 8 characters",
         },
         { status: 400 }
       );
@@ -99,7 +111,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔐 Hash password before saving
+    // 🔐 Password hash
     const hashedPassword = await bcrypt.hash(
       password,
       12
@@ -112,8 +124,6 @@ export async function POST(request: Request) {
           name,
           email,
           phone,
-
-          // Never save plain password
           password: hashedPassword,
         },
       ])
@@ -152,8 +162,18 @@ export async function POST(request: Request) {
 }
 
 // DELETE - User Delete
+// 🔐 Admin only
 export async function DELETE(request: Request) {
   try {
+    const isAdmin = await isAdminAuthenticated();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await request.json();
 
     const userId = Number(id);

@@ -36,6 +36,14 @@ export default function AdminHeader() {
             📦 Products
           </Link>
 
+          {/* Banners */}
+          <Link
+            href="/admin/banners"
+            className="text-lg font-semibold px-4 py-3 rounded-lg hover:bg-red-50 hover:text-red-600 transition"
+          >
+            🖼️ Banners
+          </Link>
+
           {/* Orders */}
           <Link
             href="/admin/orders"

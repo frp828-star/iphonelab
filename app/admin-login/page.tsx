@@ -1,33 +1,67 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
+
+    if (!email.trim()) {
+      alert("❌ Please enter admin email.");
+      return;
+    }
+
+    if (!password) {
+      alert("❌ Please enter admin password.");
+      return;
+    }
 
     setLoading(true);
 
-    // Temporary Admin Login
-    if (
-      email === "admin@iphonelab.com" &&
-      password === "admin123"
-    ) {
-      localStorage.setItem("adminLoggedIn", "true");
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
 
-      router.push("/admin");
-    } else {
-      alert("❌ Invalid Admin Email or Password");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            "Invalid admin email or password"
+        );
+      }
+
+      alert("✅ Admin login successful!");
+
+      // Full navigation so the new HttpOnly
+      // cookie is included in the next request.
+      window.location.href = "/admin";
+    } catch (error) {
+      console.error("Admin login error:", error);
+
+      alert(
+        error instanceof Error
+          ? `❌ ${error.message}`
+          : "❌ Admin login failed."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -35,7 +69,8 @@ export default function AdminLoginPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
 
-        {/* Logo / Title */}
+        {/* Header */}
+
         <div className="text-center mb-8">
 
           <div className="text-6xl mb-4">
@@ -53,31 +88,38 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Login Form */}
+
         <form
           onSubmit={handleLogin}
           className="space-y-6"
         >
 
           {/* Email */}
+
           <div>
+
             <label className="block font-semibold mb-2">
               Admin Email
             </label>
 
             <input
               type="email"
-              placeholder="admin@iphonelab.com"
+              placeholder="Enter admin email"
               value={email}
               onChange={(e) =>
                 setEmail(e.target.value)
               }
               required
+              autoComplete="username"
               className="w-full border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
             />
+
           </div>
 
           {/* Password */}
+
           <div>
+
             <label className="block font-semibold mb-2">
               Password
             </label>
@@ -90,11 +132,14 @@ export default function AdminLoginPage() {
                 setPassword(e.target.value)
               }
               required
+              autoComplete="current-password"
               className="w-full border rounded-xl p-4 outline-none focus:ring-2 focus:ring-red-500"
             />
+
           </div>
 
           {/* Login Button */}
+
           <button
             type="submit"
             disabled={loading}
@@ -107,19 +152,17 @@ export default function AdminLoginPage() {
 
         </form>
 
-        {/* Temporary Login Info */}
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        {/* Security Notice */}
 
-          <p className="text-sm text-yellow-800 font-semibold mb-2">
-            Temporary Login
+        <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
+
+          <p className="text-sm text-green-800 font-semibold">
+            🔒 Secure Admin Login
           </p>
 
-          <p className="text-sm text-gray-600">
-            Email: admin@iphonelab.com
-          </p>
-
-          <p className="text-sm text-gray-600">
-            Password: admin123
+          <p className="text-sm text-gray-600 mt-1">
+            Admin authentication is protected
+            using a secure HttpOnly session.
           </p>
 
         </div>

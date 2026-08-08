@@ -12,30 +12,41 @@ type OrderProduct = {
 
 type Order = {
   id: number;
-  customerId?: number;
-  customerName: string;
+
+  customer_id?: number;
+  customer_name: string;
+
   phone: string;
   address: string;
+
   products: OrderProduct[];
+
   subtotal?: number;
   shipping?: number;
   discount?: number;
   total: number;
-  deliveryArea?: string;
-  paymentMethod?: string;
-  transactionId?: string;
+
+  delivery_area?: string;
+  payment_method?: string;
+  transaction_id?: string;
+
   status:
     | "Pending"
     | "Confirmed"
     | "Shipped"
     | "Delivered"
     | "Cancelled";
-  createdAt: string;
+
+  created_at: string;
 };
 
 export default function MyOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] =
+    useState<Order[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
   const [selectedOrder, setSelectedOrder] =
     useState<Order | null>(null);
 
@@ -50,35 +61,52 @@ export default function MyOrdersPage() {
           return;
         }
 
-        const customer = JSON.parse(savedCustomer);
+        const customer = JSON.parse(
+          savedCustomer
+        );
 
-        const customerId = Number(customer.id);
+        const customerId = Number(
+          customer.id
+        );
 
-        if (!customerId) {
+        if (
+          !customerId ||
+          Number.isNaN(customerId)
+        ) {
           setLoading(false);
           return;
         }
 
-        const res = await fetch("/api/orders", {
-          cache: "no-store",
-        });
+        // শুধু logged-in customer-এর orders
+        const res = await fetch(
+          `/api/orders?customerId=${customerId}`,
+          {
+            cache: "no-store",
+          }
+        );
 
         if (!res.ok) {
-          throw new Error("Failed to load orders");
+          const errorData =
+            await res.json().catch(() => null);
+
+          throw new Error(
+            errorData?.error ||
+              "Failed to load orders"
+          );
         }
 
         const data = await res.json();
 
-        const customerOrders = Array.isArray(data)
-          ? data.filter(
-              (order: Order) =>
-                Number(order.customerId) === customerId
-            )
-          : [];
-
-        setOrders(customerOrders);
+        setOrders(
+          Array.isArray(data) ? data : []
+        );
       } catch (error) {
-        console.error(error);
+        console.error(
+          "Customer orders error:",
+          error
+        );
+
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -87,7 +115,9 @@ export default function MyOrdersPage() {
     loadOrders();
   }, []);
 
-  const getStatusClass = (status: Order["status"]) => {
+  const getStatusClass = (
+    status: Order["status"]
+  ) => {
     switch (status) {
       case "Pending":
         return "bg-yellow-100 text-yellow-700";
@@ -138,11 +168,9 @@ export default function MyOrdersPage() {
         {/* Loading */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow p-12 text-center">
-
             <p className="text-xl font-semibold">
               Loading your orders...
             </p>
-
           </div>
         ) : orders.length === 0 ? (
           /* No Orders */
@@ -190,7 +218,7 @@ export default function MyOrdersPage() {
 
                     <p className="text-sm text-gray-500 mt-1">
                       {new Date(
-                        order.createdAt
+                        order.created_at
                       ).toLocaleString()}
                     </p>
 
@@ -207,7 +235,10 @@ export default function MyOrdersPage() {
                     </span>
 
                     <p className="text-xl font-bold text-red-600">
-                      ৳ {Number(order.total).toLocaleString()}
+                      ৳{" "}
+                      {Number(
+                        order.total
+                      ).toLocaleString()}
                     </p>
 
                   </div>
@@ -244,8 +275,12 @@ export default function MyOrdersPage() {
                         <p className="font-bold">
                           ৳{" "}
                           {(
-                            Number(product.price) *
-                            Number(product.quantity)
+                            Number(
+                              product.price
+                            ) *
+                            Number(
+                              product.quantity
+                            )
                           ).toLocaleString()}
                         </p>
 
@@ -263,9 +298,10 @@ export default function MyOrdersPage() {
 
                     <p>
                       📍{" "}
-                      {order.deliveryArea === "inside"
+                      {order.delivery_area ===
+                      "inside"
                         ? "Inside Dhaka"
-                        : order.deliveryArea ===
+                        : order.delivery_area ===
                           "outside"
                         ? "Outside Dhaka"
                         : "Delivery"}
@@ -273,7 +309,7 @@ export default function MyOrdersPage() {
 
                     <p className="mt-1">
                       💳{" "}
-                      {order.paymentMethod ||
+                      {order.payment_method ||
                         "Payment"}
                     </p>
 
@@ -300,7 +336,10 @@ export default function MyOrdersPage() {
 
       </div>
 
+      {/* ================================= */}
       {/* Order Details Modal */}
+      {/* ================================= */}
+
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-5 z-50">
 
@@ -364,7 +403,7 @@ export default function MyOrdersPage() {
 
                   <p>
                     <strong>Name:</strong>{" "}
-                    {selectedOrder.customerName}
+                    {selectedOrder.customer_name}
                   </p>
 
                   <p>
@@ -417,8 +456,12 @@ export default function MyOrdersPage() {
                         <p className="font-bold">
                           ৳{" "}
                           {(
-                            Number(product.price) *
-                            Number(product.quantity)
+                            Number(
+                              product.price
+                            ) *
+                            Number(
+                              product.quantity
+                            )
                           ).toLocaleString()}
                         </p>
 
@@ -442,16 +485,16 @@ export default function MyOrdersPage() {
 
                   <p>
                     <strong>Method:</strong>{" "}
-                    {selectedOrder.paymentMethod ||
+                    {selectedOrder.payment_method ||
                       "Not provided"}
                   </p>
 
-                  {selectedOrder.transactionId && (
+                  {selectedOrder.transaction_id && (
                     <p>
                       <strong>
                         Transaction ID:
                       </strong>{" "}
-                      {selectedOrder.transactionId}
+                      {selectedOrder.transaction_id}
                     </p>
                   )}
 
@@ -474,7 +517,8 @@ export default function MyOrdersPage() {
                     <span>
                       ৳{" "}
                       {Number(
-                        selectedOrder.subtotal || 0
+                        selectedOrder.subtotal ||
+                          0
                       ).toLocaleString()}
                     </span>
                   </div>
@@ -485,7 +529,8 @@ export default function MyOrdersPage() {
                     <span>
                       ৳{" "}
                       {Number(
-                        selectedOrder.shipping || 0
+                        selectedOrder.shipping ||
+                          0
                       ).toLocaleString()}
                     </span>
                   </div>
@@ -496,7 +541,8 @@ export default function MyOrdersPage() {
                     <span>
                       -৳{" "}
                       {Number(
-                        selectedOrder.discount || 0
+                        selectedOrder.discount ||
+                          0
                       ).toLocaleString()}
                     </span>
                   </div>
@@ -522,7 +568,7 @@ export default function MyOrdersPage() {
               <p className="text-sm text-gray-500">
                 Order Date:{" "}
                 {new Date(
-                  selectedOrder.createdAt
+                  selectedOrder.created_at
                 ).toLocaleString()}
               </p>
 

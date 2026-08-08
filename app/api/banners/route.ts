@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/adminAuth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,50 +10,72 @@ const supabase = createClient(
 const BUCKET = "banners";
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
 
+// ============================================
+// GET - সব Banner
+// Public: সবাই দেখতে পারবে
+// ============================================
+
 export async function GET() {
   try {
     const { data, error } = await supabase
       .from("banners")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
+      console.error("GET banners error:", error);
+
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(data ?? []);
   } catch (error) {
-    console.error(error);
+    console.error("GET banners error:", error);
 
     return NextResponse.json(
-      { error: "Failed to fetch banners" },
+      {
+        error: "Failed to fetch banners",
+      },
       { status: 500 }
     );
   }
 }
 
+// ============================================
+// POST - নতুন Banner
+// Admin Only
+// ============================================
+
 export async function POST(request: Request) {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const formData = await request.formData();
 
     const title = String(
       formData.get("title") || ""
-    );
+    ).trim();
 
     const subtitle = String(
       formData.get("subtitle") || ""
-    );
+    ).trim();
 
     const buttonText = String(
       formData.get("button_text") || "Shop Now"
-    );
+    ).trim();
 
     const buttonLink = String(
       formData.get("button_link") || "/shop"
-    );
+    ).trim();
 
     const active =
       String(formData.get("active")) === "true";
@@ -61,14 +84,18 @@ export async function POST(request: Request) {
 
     if (!(imageFile instanceof File)) {
       return NextResponse.json(
-        { error: "Banner image is required" },
+        {
+          error: "Banner image is required",
+        },
         { status: 400 }
       );
     }
 
     if (!imageFile.type.startsWith("image/")) {
       return NextResponse.json(
-        { error: "Only image files are allowed" },
+        {
+          error: "Only image files are allowed",
+        },
         { status: 400 }
       );
     }
@@ -76,8 +103,7 @@ export async function POST(request: Request) {
     if (imageFile.size > MAX_IMAGE_SIZE) {
       return NextResponse.json(
         {
-          error:
-            "Image must be smaller than 20MB",
+          error: "Image must be smaller than 20MB",
         },
         { status: 400 }
       );
@@ -106,8 +132,15 @@ export async function POST(request: Request) {
         });
 
     if (uploadError) {
+      console.error(
+        "Banner upload error:",
+        uploadError
+      );
+
       return NextResponse.json(
-        { error: uploadError.message },
+        {
+          error: uploadError.message,
+        },
         { status: 500 }
       );
     }
@@ -138,8 +171,15 @@ export async function POST(request: Request) {
         .from(BUCKET)
         .remove([filePath]);
 
+      console.error(
+        "POST banners database error:",
+        error
+      );
+
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: error.message,
+        },
         { status: 500 }
       );
     }
@@ -148,19 +188,29 @@ export async function POST(request: Request) {
       status: 201,
     });
   } catch (error) {
-    console.error(error);
+    console.error("POST banners error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to create banner",
+        error: "Failed to create banner",
       },
       { status: 500 }
     );
   }
 }
 
+// ============================================
+// PUT - Banner Update
+// Admin Only
+// ============================================
+
 export async function PUT(request: Request) {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const formData =
       await request.formData();
@@ -172,8 +222,7 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json(
         {
-          error:
-            "Banner ID is required",
+          error: "Banner ID is required",
         },
         { status: 400 }
       );
@@ -181,21 +230,21 @@ export async function PUT(request: Request) {
 
     const title = String(
       formData.get("title") || ""
-    );
+    ).trim();
 
     const subtitle = String(
       formData.get("subtitle") || ""
-    );
+    ).trim();
 
     const buttonText = String(
       formData.get("button_text") ||
         "Shop Now"
-    );
+    ).trim();
 
     const buttonLink = String(
       formData.get("button_link") ||
         "/shop"
-    );
+    ).trim();
 
     const active =
       String(formData.get("active")) ===
@@ -216,6 +265,10 @@ export async function PUT(request: Request) {
     };
 
     let oldImage = "";
+
+    // ============================================
+    // নতুন image থাকলে upload
+    // ============================================
 
     if (
       imageFile instanceof File &&
@@ -278,6 +331,11 @@ export async function PUT(request: Request) {
         );
 
       if (uploadError) {
+        console.error(
+          "Banner update upload error:",
+          uploadError
+        );
+
         return NextResponse.json(
           {
             error:
@@ -296,6 +354,10 @@ export async function PUT(request: Request) {
       updateData.image =
         publicUrlData.publicUrl;
 
+      // ============================================
+      // পুরোনো image খুঁজে বের করা
+      // ============================================
+
       const {
         data: oldBanner,
       } = await supabase
@@ -308,6 +370,10 @@ export async function PUT(request: Request) {
         oldBanner?.image || "";
     }
 
+    // ============================================
+    // Database update
+    // ============================================
+
     const {
       data,
       error,
@@ -319,11 +385,22 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
+      console.error(
+        "PUT banners database error:",
+        error
+      );
+
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: error.message,
+        },
         { status: 500 }
       );
     }
+
+    // ============================================
+    // পুরোনো image delete
+    // ============================================
 
     if (oldImage) {
       const marker =
@@ -343,21 +420,31 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error(error);
+    console.error("PUT banners error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to update banner",
+        error: "Failed to update banner",
       },
       { status: 500 }
     );
   }
 }
 
+// ============================================
+// DELETE - Banner Delete
+// Admin Only
+// ============================================
+
 export async function DELETE(
   request: Request
 ) {
+  const auth = await requireAdmin();
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const body =
       await request.json();
@@ -374,6 +461,10 @@ export async function DELETE(
       );
     }
 
+    // ============================================
+    // Banner image খুঁজে বের করা
+    // ============================================
+
     const {
       data: banner,
       error: findError,
@@ -384,6 +475,11 @@ export async function DELETE(
       .single();
 
     if (findError) {
+      console.error(
+        "Find banner error:",
+        findError
+      );
+
       return NextResponse.json(
         {
           error:
@@ -393,6 +489,10 @@ export async function DELETE(
       );
     }
 
+    // ============================================
+    // Database থেকে delete
+    // ============================================
+
     const {
       error,
     } = await supabase
@@ -401,25 +501,32 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) {
+      console.error(
+        "DELETE banner database error:",
+        error
+      );
+
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: error.message,
+        },
         { status: 500 }
       );
     }
+
+    // ============================================
+    // Storage image delete
+    // ============================================
 
     if (banner?.image) {
       const marker =
         `/storage/v1/object/public/${BUCKET}/`;
 
       if (
-        banner.image.includes(
-          marker
-        )
+        banner.image.includes(marker)
       ) {
         const filePath =
-          banner.image.split(
-            marker
-          )[1];
+          banner.image.split(marker)[1];
 
         if (filePath) {
           await supabase.storage
@@ -437,7 +544,10 @@ export async function DELETE(
         "Banner deleted successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error(
+      "DELETE banner error:",
+      error
+    );
 
     return NextResponse.json(
       {

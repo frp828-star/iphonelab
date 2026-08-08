@@ -1,16 +1,72 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isAdminAuthenticated } from "@/lib/adminAuth";
 
-// GET - সব Orders
-export async function GET() {
+// ============================================
+// GET - Orders
+// Admin → সব Orders
+// Customer → শুধু নিজের Orders
+// ============================================
+
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const customerIdParam = url.searchParams.get("customerId");
+
+    const isAdmin = await isAdminAuthenticated();
+
+    // -------------------------------
+    // ADMIN → সব orders
+    // -------------------------------
+    if (isAdmin && !customerIdParam) {
+      const { data, error } = await supabaseAdmin
+        .from("orders")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        console.error("GET admin orders error:", error);
+
+        return NextResponse.json(
+          { error: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(data ?? []);
+    }
+
+    // -------------------------------
+    // CUSTOMER → নিজের orders
+    // -------------------------------
+    if (!customerIdParam) {
+      return NextResponse.json(
+        { error: "Customer ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const customerId = Number(customerIdParam);
+
+    if (!customerId || Number.isNaN(customerId)) {
+      return NextResponse.json(
+        { error: "Valid Customer ID is required" },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from("orders")
       .select("*")
-      .order("created_at", { ascending: false });
+      .eq("customer_id", customerId)
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
-      console.error("GET orders error:", error);
+      console.error("GET customer orders error:", error);
 
       return NextResponse.json(
         { error: error.message },
@@ -20,7 +76,7 @@ export async function GET() {
 
     return NextResponse.json(data ?? []);
   } catch (error) {
-    console.error(error);
+    console.error("GET orders error:", error);
 
     return NextResponse.json(
       { error: "Failed to load orders" },
@@ -29,7 +85,11 @@ export async function GET() {
   }
 }
 
-// POST - নতুন Order তৈরি
+// ============================================
+// POST - নতুন Order
+// Customer checkout থেকে ব্যবহার করবে
+// ============================================
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -90,9 +150,9 @@ export async function POST(request: Request) {
     const newOrder = {
       customer_id: Number(customerId),
 
-      customer_name: customerName.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
+      customer_name: String(customerName).trim(),
+      phone: String(phone).trim(),
+      address: String(address).trim(),
 
       products,
 
@@ -101,7 +161,9 @@ export async function POST(request: Request) {
       discount: Number(discount) || 0,
       total: Number(total) || 0,
 
-      delivery_area: deliveryArea || "inside",
+      delivery_area:
+        deliveryArea || "inside",
+
       payment_method: paymentMethod,
 
       payment_number:
@@ -135,7 +197,7 @@ export async function POST(request: Request) {
       status: 201,
     });
   } catch (error) {
-    console.error(error);
+    console.error("POST orders error:", error);
 
     return NextResponse.json(
       { error: "Failed to create order" },
@@ -144,27 +206,43 @@ export async function POST(request: Request) {
   }
 }
 
+// ============================================
 // PUT - Order Update
+// Admin only
+// ============================================
+
 export async function PUT(request: Request) {
   try {
+    const isAdmin = await isAdminAuthenticated();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const id = Number(body.id);
 
-    if (!id) {
+    if (!id || Number.isNaN(id)) {
       return NextResponse.json(
         { error: "Order ID is required" },
         { status: 400 }
       );
     }
 
-    const updateData: Record<string, unknown> = {
+    const updateData: Record<
+      string,
+      unknown
+    > = {
       ...body,
     };
 
     delete updateData.id;
 
-    // Frontend camelCase → Supabase snake_case
+    // camelCase → snake_case
 
     if ("customerId" in updateData) {
       updateData.customer_id = Number(
@@ -234,7 +312,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error(error);
+    console.error("PUT orders error:", error);
 
     return NextResponse.json(
       { error: "Failed to update order" },
@@ -243,14 +321,27 @@ export async function PUT(request: Request) {
   }
 }
 
+// ============================================
 // DELETE - Order Delete
+// Admin only
+// ============================================
+
 export async function DELETE(request: Request) {
   try {
+    const isAdmin = await isAdminAuthenticated();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const id = Number(body.id);
 
-    if (!id) {
+    if (!id || Number.isNaN(id)) {
       return NextResponse.json(
         { error: "Order ID is required" },
         { status: 400 }
@@ -284,7 +375,7 @@ export async function DELETE(request: Request) {
       message: "Order deleted successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("DELETE orders error:", error);
 
     return NextResponse.json(
       { error: "Failed to delete order" },

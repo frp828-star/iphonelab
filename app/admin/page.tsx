@@ -28,6 +28,7 @@ export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const loadDashboard = async () => {
     try {
@@ -81,6 +82,48 @@ export default function AdminDashboardPage() {
     loadDashboard();
   }, []);
 
+  const handleLogout = async () => {
+    if (loggingOut) return;
+
+    try {
+      setLoggingOut(true);
+
+      const res = await fetch(
+        "/api/admin/logout",
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || "Logout failed"
+        );
+      }
+
+      // Remove old client-side admin flag if it exists
+      localStorage.removeItem("adminLoggedIn");
+
+      // Go to admin login page
+      window.location.href = "/admin-login";
+    } catch (error) {
+      console.error(
+        "Admin logout error:",
+        error
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Logout failed"
+      );
+
+      setLoggingOut(false);
+    }
+  };
+
   const totalSales = orders.reduce(
     (sum, order) =>
       sum + Number(order.total || 0),
@@ -97,6 +140,10 @@ export default function AdminDashboardPage() {
 
   const completedOrders = orders.filter(
     (order) => order.status === "Completed"
+  ).length;
+
+  const cancelledOrders = orders.filter(
+    (order) => order.status === "Cancelled"
   ).length;
 
   const recentOrders = orders
@@ -126,7 +173,6 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="min-h-screen bg-gray-100 px-4 py-8 md:px-8">
-
       <div className="max-w-7xl mx-auto">
 
         {/* =================================
@@ -145,13 +191,32 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadDashboard}
-            className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-semibold"
-          >
-            🔄 Refresh
-          </button>
+          <div className="flex flex-wrap gap-3">
+
+            {/* Refresh */}
+
+            <button
+              type="button"
+              onClick={loadDashboard}
+              className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition"
+            >
+              🔄 Refresh
+            </button>
+
+            {/* Logout */}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-xl font-semibold transition"
+            >
+              {loggingOut
+                ? "Logging out..."
+                : "🚪 Logout"}
+            </button>
+
+          </div>
 
         </div>
 
@@ -164,11 +229,9 @@ export default function AdminDashboardPage() {
           {/* Sales */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-6">
-
             <div className="flex items-center justify-between">
 
               <div>
-
                 <p className="text-gray-500 text-sm">
                   Total Sales
                 </p>
@@ -176,7 +239,6 @@ export default function AdminDashboardPage() {
                 <p className="text-2xl md:text-3xl font-bold text-red-600 mt-2">
                   ৳ {totalSales.toLocaleString()}
                 </p>
-
               </div>
 
               <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-3xl">
@@ -184,17 +246,14 @@ export default function AdminDashboardPage() {
               </div>
 
             </div>
-
           </div>
 
           {/* Orders */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-6">
-
             <div className="flex items-center justify-between">
 
               <div>
-
                 <p className="text-gray-500 text-sm">
                   Total Orders
                 </p>
@@ -202,7 +261,6 @@ export default function AdminDashboardPage() {
                 <p className="text-3xl font-bold mt-2">
                   {orders.length}
                 </p>
-
               </div>
 
               <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-3xl">
@@ -210,17 +268,14 @@ export default function AdminDashboardPage() {
               </div>
 
             </div>
-
           </div>
 
           {/* Customers */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-6">
-
             <div className="flex items-center justify-between">
 
               <div>
-
                 <p className="text-gray-500 text-sm">
                   Customers
                 </p>
@@ -228,7 +283,6 @@ export default function AdminDashboardPage() {
                 <p className="text-3xl font-bold mt-2">
                   {customers.length}
                 </p>
-
               </div>
 
               <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl">
@@ -236,17 +290,14 @@ export default function AdminDashboardPage() {
               </div>
 
             </div>
-
           </div>
 
           {/* Products */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-6">
-
             <div className="flex items-center justify-between">
 
               <div>
-
                 <p className="text-gray-500 text-sm">
                   Products
                 </p>
@@ -254,7 +305,6 @@ export default function AdminDashboardPage() {
                 <p className="text-3xl font-bold mt-2">
                   {products.length}
                 </p>
-
               </div>
 
               <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-3xl">
@@ -262,7 +312,6 @@ export default function AdminDashboardPage() {
               </div>
 
             </div>
-
           </div>
 
         </div>
@@ -276,7 +325,6 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
 
             <div>
-
               <h2 className="text-2xl font-bold">
                 📊 Order Overview
               </h2>
@@ -284,7 +332,6 @@ export default function AdminDashboardPage() {
               <p className="text-gray-500 mt-1">
                 Current order status summary
               </p>
-
             </div>
 
             <Link
@@ -301,7 +348,6 @@ export default function AdminDashboardPage() {
             {/* Pending */}
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
-
               <p className="text-yellow-700 text-sm">
                 Pending
               </p>
@@ -309,13 +355,11 @@ export default function AdminDashboardPage() {
               <p className="text-3xl font-bold text-yellow-700 mt-2">
                 {pendingOrders}
               </p>
-
             </div>
 
             {/* Processing */}
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-
               <p className="text-blue-700 text-sm">
                 Processing
               </p>
@@ -323,13 +367,11 @@ export default function AdminDashboardPage() {
               <p className="text-3xl font-bold text-blue-700 mt-2">
                 {processingOrders}
               </p>
-
             </div>
 
             {/* Completed */}
 
             <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-
               <p className="text-green-700 text-sm">
                 Completed
               </p>
@@ -337,26 +379,18 @@ export default function AdminDashboardPage() {
               <p className="text-3xl font-bold text-green-700 mt-2">
                 {completedOrders}
               </p>
-
             </div>
 
             {/* Cancelled */}
 
             <div className="bg-red-50 border border-red-200 rounded-xl p-5">
-
               <p className="text-red-700 text-sm">
                 Cancelled
               </p>
 
               <p className="text-3xl font-bold text-red-700 mt-2">
-                {
-                  orders.filter(
-                    (order) =>
-                      order.status === "Cancelled"
-                  ).length
-                }
+                {cancelledOrders}
               </p>
-
             </div>
 
           </div>
@@ -424,7 +458,6 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
 
             <div>
-
               <h2 className="text-2xl font-bold">
                 🧾 Recent Orders
               </h2>
@@ -432,7 +465,6 @@ export default function AdminDashboardPage() {
               <p className="text-gray-500 mt-1">
                 Latest customer orders
               </p>
-
             </div>
 
             <Link
@@ -465,7 +497,6 @@ export default function AdminDashboardPage() {
               <table className="w-full min-w-[700px]">
 
                 <thead>
-
                   <tr className="border-b text-left">
 
                     <th className="pb-4 text-sm text-gray-500">
@@ -489,7 +520,6 @@ export default function AdminDashboardPage() {
                     </th>
 
                   </tr>
-
                 </thead>
 
                 <tbody>
@@ -503,27 +533,21 @@ export default function AdminDashboardPage() {
                       >
 
                         <td className="py-4">
-
                           <span className="font-bold text-red-600">
                             #{order.id}
                           </span>
-
                         </td>
 
                         <td className="py-4">
-
                           <p className="font-semibold">
                             {order.customer_name}
                           </p>
-
                         </td>
 
                         <td className="py-4 text-sm text-gray-500">
-
                           {new Date(
                             order.created_at
                           ).toLocaleDateString()}
-
                         </td>
 
                         <td className="py-4">
@@ -548,12 +572,10 @@ export default function AdminDashboardPage() {
                         </td>
 
                         <td className="py-4 text-right font-bold">
-
                           ৳{" "}
                           {Number(
                             order.total || 0
                           ).toLocaleString()}
-
                         </td>
 
                       </tr>
@@ -572,7 +594,6 @@ export default function AdminDashboardPage() {
         </div>
 
       </div>
-
     </main>
   );
 }
